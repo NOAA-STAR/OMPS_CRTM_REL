@@ -51,7 +51,7 @@ MODULE OMPS_NAMELIST_MODULE
         CHARACTER(len=255),PUBLIC :: wL_file
         INTEGER ,PUBLIC :: nprof, nspec
         INTEGER, PUBLIC :: max_FOV
-        LOGICAL, PUBLIC :: USE_NADIR_FOV = .TRUE.
+        LOGICAL, PUBLIC :: Use_allFOV_Nadir = .FALSE.
         INTEGER, PUBLIC :: Refl_alg 
 
         INTEGER :: n_Surf_ch
@@ -126,6 +126,18 @@ CONTAINS
     ALLOCATE(select_ch(n_Surf_ch))
     select_ch(1:n_Surf_ch) = namelist%select_ch(1:n_Surf_ch)
   END SUBROUTINE get_select_ch
+  
+  #only used for the tuning purpose
+  SUBROUTINE set_select_ch(namelist, select_ch ) 
+    TYPE(OMPS_IO_NAMELIST) :: namelist
+    INTEGER :: select_ch(:)
+    INTEGER :: n_Surf_ch
+    namelist%n_Surf_ch = size(select_ch)
+    IF (namelist%n_Surf_ch > n_max_select) THEN
+       WRITE(*,*) " Error: n_Surf_ch should be <= ", n_max_select
+    ENDIF
+    namelist%select_ch(1:n_Surf_ch) = select_ch(1:n_Surf_ch)
+  END SUBROUTINE set_select_ch
 
 END MODULE OMPS_NAMELIST_MODULE 
 
