@@ -130,7 +130,8 @@ PROGRAM CRTM_OMPS_Simulation
   CRTM_Coeff_Path = namelist%CRTM_Coeff_Path
   CRTM_Output_File = namelist%crtm_output_file
   CALL get_select_ch(namelist, n_Surf_ch, select_ch)
- 
+  namelist%Use_allFOV_Nadir = .TRUE.
+  
   ! =========================================================
   !  STEP 1: CRTM initialization
   ! =========================================================
@@ -208,7 +209,7 @@ PROGRAM CRTM_OMPS_Simulation
   ENDIF
 
   ! Use the nadir FOV of the allFOV
-  IF(namelist%USE_NADIR_FOV) THEN
+  IF(namelist%Use_allFOV_Nadir) THEN
      opt(:)%nFOV = NINT(namelist%max_FOV/2.0) 
      save_FOV(:) = NINT(namelist%max_FOV/2.0)
   ELSE  
