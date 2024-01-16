@@ -132,8 +132,9 @@ CONTAINS
     TYPE(OMPS_IO_NAMELIST) :: namelist
     INTEGER :: select_ch(:)
     INTEGER :: n_Surf_ch
-    namelist%n_Surf_ch = size(select_ch)
-    IF (namelist%n_Surf_ch > n_max_select) THEN
+    n_Surf_ch = size(select_ch)
+    namelist%n_Surf_ch = n_Surf_ch 
+    IF (n_Surf_ch > n_max_select) THEN
        WRITE(*,*) " Error: n_Surf_ch should be <= ", n_max_select
     ENDIF
     namelist%select_ch(1:n_Surf_ch) = select_ch(1:n_Surf_ch)
