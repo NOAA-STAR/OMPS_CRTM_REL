@@ -127,7 +127,7 @@ CONTAINS
     select_ch(1:n_Surf_ch) = namelist%select_ch(1:n_Surf_ch)
   END SUBROUTINE get_select_ch
   
-  #only used for the tuning purpose
+  !only used for the tuning purpose
   SUBROUTINE set_select_ch(namelist, select_ch ) 
     TYPE(OMPS_IO_NAMELIST) :: namelist
     INTEGER :: select_ch(:)
