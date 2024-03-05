@@ -112,6 +112,7 @@ MODULE CRTM_AtmOptics_Define
     REAL(fp) :: depolarization = 0.0279_fp
     ! Array components
     REAL(fp), ALLOCATABLE :: Optical_Depth(:)         ! K-Max
+    REAL(fp), ALLOCATABLE :: Back_Scattering(:)         ! K-Max
     REAL(fp), ALLOCATABLE :: Single_Scatter_Albedo(:) ! K-Max
     REAL(fp), ALLOCATABLE :: Asymmetry_Factor(:)      ! K-Max
     REAL(fp), ALLOCATABLE :: Delta_Truncation(:)      ! K-Max
@@ -299,7 +300,7 @@ CONTAINS
       TYPE(CRTM_AtmOptics_type), INTENT(OUT) :: self
       INTEGER                  , INTENT(OUT) :: alloc_stat
       ! Allocate object
-      ALLOCATE( self%Optical_Depth( n_Layers ), &
+      ALLOCATE( self%Optical_Depth( n_Layers ), self%Back_Scattering( n_Layers ) , &
                 self%Single_Scatter_Albedo( n_Layers ), &
                 self%Asymmetry_Factor( n_Layers ), &
                 self%Delta_Truncation( n_Layers ), &
@@ -345,6 +346,7 @@ CONTAINS
     self%Scattering_Optical_Depth = ZERO
     IF ( .NOT. CRTM_AtmOptics_Associated( self ) ) RETURN
     self%Optical_Depth         = ZERO
+    self%Back_Scattering       = ZERO
     self%Single_Scatter_Albedo = ZERO
     self%Asymmetry_Factor      = ZERO
     self%Delta_Truncation      = ZERO

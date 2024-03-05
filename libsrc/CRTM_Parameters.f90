@@ -56,7 +56,7 @@ MODULE CRTM_Parameters
   ! specified in a single initialisation call
   ! -----------------------------------------
   INTEGER, PUBLIC, PARAMETER :: MAX_N_SENSORS = 100
-
+  INTEGER, PUBLIC, PARAMETER :: MAX_N_THREADS = 16
   ! -----------------------------------------------------
   ! The maximum number of atmospheric profiles and layers
   ! accepted. These values are arbitrary. Nothing magical
@@ -115,7 +115,8 @@ MODULE CRTM_Parameters
   ! Default string length for SensorIDs
   INTEGER, PUBLIC, PARAMETER :: STRLEN = 20
 
-
+  ! No backscattering for active sensors
+  REAL(fp), PUBLIC, PARAMETER :: MISSING_REFL  =  -9999.0_fp
   !#----------------------------------------------------------------------------#
   !#                       -- AtmAbsorption PARAMETERS --                       #
   !#----------------------------------------------------------------------------#

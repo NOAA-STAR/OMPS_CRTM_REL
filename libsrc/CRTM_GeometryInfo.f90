@@ -733,9 +733,7 @@ CONTAINS
       it = REAL(i,fp) * t
       AU_ratio2 = AU_ratio2 + (A(i) * COS(it)) + (B(i) * SIN(it))
     END DO
-   !(1.00011+0.034221*cos(TH)+0.001280*sin(TH)+0.000719*cos(2*TH)+0.000077*sin(2*TH));
-!TH=0.9863*(jday)*3.1415926/180;
- 
+    
   END FUNCTION Compute_AU_ratio2
 
 END MODULE CRTM_GeometryInfo

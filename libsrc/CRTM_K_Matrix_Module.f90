@@ -33,6 +33,7 @@ MODULE CRTM_K_Matrix_Module
                                         MAX_N_AZIMUTH_FOURIER  , &
                                         MAX_SOURCE_ZENITH_ANGLE, &
                                         MAX_N_STREAMS          , &
+                                        MAX_N_THREADS          , &
                                         MIN_COVERAGE_THRESHOLD , &
                                         SCATTERING_ALBEDO_THRESHOLD
   USE CRTM_SpcCoeff,              ONLY: SC, &
@@ -417,6 +418,7 @@ CONTAINS
 !$OMP END SINGLE
 !$OMP END PARALLEL
 
+    IF( n_omp_threads > MAX_N_THREADS ) n_omp_threads = MAX_N_THREADS
     print *,' n_omp_threads = ',n_omp_threads, n_Profiles
     ! Determine how many threads to use for profiles and channels
     ! After profiles get what they need, we use the left-over threads
@@ -426,8 +428,8 @@ CONTAINS
       n_channel_threads = 1
       CALL OMP_SET_MAX_ACTIVE_LEVELS(1)
     ELSE
-      n_profile_threads = n_Profiles
-      n_channel_threads = MIN(n_Channels, n_omp_threads / n_Profiles)
+      n_profile_threads = 1
+      n_channel_threads = MIN(n_Channels, n_omp_threads)
 !      n_channel_threads = MIN(n_Channels, n_omp_threads )
       if(n_channel_threads > 1) THEN
         CALL OMP_SET_MAX_ACTIVE_LEVELS(2)
@@ -555,8 +557,11 @@ CONTAINS
       REAL(fp) :: transmittance, transmittance_K
       REAL(fp) :: transmittance_clear, transmittance_clear_K
       REAL(fp) :: r_cloudy(4)
-      INTEGER :: nt, lnn, ks, k
-      INTEGER, DIMENSION(:), Allocatable :: ln_index, activate_thread
+      INTEGER :: nt, ks, k
+      ! Local OpenMP-related variables:
+      INTEGER :: start_ch, end_ch, chunk_ch, n_sensor_channels
+      
+      INTEGER :: n_inactive_channels(n_channel_threads+1)
 
       ! Local atmosphere structure for extra layering
       TYPE(CRTM_Atmosphere_type) :: Atm, Atm_K(n_channel_threads)
@@ -840,21 +845,13 @@ CONTAINS
       ! SENSOR LOOP
       ! -----------
       ! Initialise channel counter for sensor(n)/channel(l) count
-      lnn = sum(ChannelInfo(:)%n_Channels)
-      Allocate( ln_index( lnn) )
-
       ln = 0
-      lnn = 0
+
       Sensor_Loop: DO n = 1, n_Sensors
 
 
         ! Shorter name
         SensorIndex = ChannelInfo(n)%Sensor_Index
-        Channel_Loop3: DO l = 1, ChannelInfo(n)%n_Channels
-          IF ( .NOT. ChannelInfo(n)%Process_Channel(l) ) CYCLE Channel_Loop3
-          lnn = lnn + 1 
-          ln_index(l) = lnn
-        END DO Channel_Loop3
 
         ! Check if antenna correction to be applied for current sensor
         compute_antenna_correction = ( Opt%Use_Antenna_Correction               .AND. &
@@ -862,16 +859,12 @@ CONTAINS
                                        iFOV /= 0 )
 
 
-
-
-
 !$OMP PARALLEL DO NUM_THREADS(n_channel_threads) PRIVATE(Message)
         DO nt = 1, n_channel_threads
 
-
           ! Allocate the AtmAbsorption predictor structures
           CALL CRTM_Predictor_Create( &
-                 Predictor(nt)   , &
+                 Predictor(nt), &
                  atm%n_Layers, &
                  SensorIndex , &
                  SaveFWV = 1   )
@@ -884,7 +877,6 @@ CONTAINS
             CYCLE
           END IF
 
-
           ! ...Compute forward predictors
           CALL CRTM_Compute_Predictors( SensorIndex   , &  ! Input
                                         Atm           , &  ! Input
@@ -894,12 +886,11 @@ CONTAINS
                                         PVar(nt)            )  ! Internal variable output
 
 
-
           ! Allocate the AtmAbsorption predictor structures
           CALL CRTM_Predictor_Create( &
                  Predictor_K(nt) , &
                  atm%n_Layers, &
-                 SensorIndex   )
+                 SensorIndex )
           IF (  .NOT. CRTM_Predictor_Associated(Predictor_K(nt)) ) THEN
             Error_Status=FAILURE
             WRITE( Message,'("Error allocating predictor_K structures for profile #",i0, &
@@ -926,6 +917,7 @@ CONTAINS
 
         END DO
 !$OMP END PARALLEL DO
+
         IF ( Error_Status == FAILURE) RETURN
 
         ! Compute NLTE correction predictors
@@ -937,34 +929,68 @@ CONTAINS
                  NLTE_Predictor      )  ! Output
         END IF
 
-        Allocate( activate_thread(n_channel_threads) )
-        activate_thread(:) = 0
-!   CALL omp_set_num_threads(n_channel_threads)
+        ! ----------------------------
+        ! counters for thread loop
+        ! -----------------------------
+        n_sensor_channels = ChannelInfo(n)%n_Channels
+
+        chunk_ch = CEILING( REAL(n_sensor_channels) / REAL(n_channel_threads) )
+        !count inactive channels in each chunk
+        n_inactive_channels(:) = 0
+        DO l = 1, n_sensor_channels
+          IF ( .NOT. ChannelInfo(n)%Process_Channel(l) ) THEN
+            nt = FLOOR( REAL(l-1) / REAL(chunk_ch) ) + 1
+            n_inactive_channels(nt) = n_inactive_channels(nt) + 1
+          END IF
+        END DO
+        DO nt = 2, n_channel_threads
+          n_inactive_channels(nt) = n_inactive_channels(nt) + n_inactive_channels(nt - 1)
+        END DO
+        DO nt = n_channel_threads+1, 2, -1
+          n_inactive_channels(nt) = n_inactive_channels(nt - 1)
+        END DO
+        n_inactive_channels(1) = 0
+        !end count
+        
+        
+!        print *,n_channel_threads,chunk_ch
+!        print *,n_inactive_channels(:)
+!        print *,' Liu check  001 '
         ! ------------
         ! THREAD LOOP
         ! ------------
+
 !$OMP PARALLEL DO NUM_THREADS(n_channel_threads)                        &
 !$OMP    FIRSTPRIVATE(ln, r_cloudy)                                     &
-!$OMP    PRIVATE(Message, ChannelIndex, n_Full_Streams, AAvar,    &
+!$OMP    PRIVATE(Message, ChannelIndex, n_Full_Streams,    &
 !$OMP          nt, Wavenumber, Status_FWD, Status_K,      &
 !$OMP          transmittance, transmittance_K, transmittance_clear,     &
 !$OMP          transmittance_clear_K, l, mth_Azi, ks, k)
-        Channel_Loop: DO l = 1, ChannelInfo(n)%n_Channels
-!!      nt = omp_get_thread_num() + 1
+
+        Thread_Loop: DO nt = 1, n_channel_threads
+
+          start_ch = (nt - 1) * chunk_ch + 1
+          IF ( nt == n_channel_threads) THEN
+            end_ch = n_sensor_channels
+          ELSE
+            end_ch = start_ch + chunk_ch - 1
+          END IF
+          ln = (start_ch - 1) - n_inactive_channels(nt)
+
+          ! -------------
+          ! CHANNEL LOOP
+          ! -------------
+!          print *,' Liu  check 002 ',nt,ln,start_ch, end_ch
+          Channel_Loop: DO l = start_ch, end_ch
+!            print *,' Liu check 003 ',l
             ! Channel setup
             ! ...Skip channel if requested
+            IF ( l > n_sensor_channels ) CYCLE Channel_Loop
             IF ( .NOT. ChannelInfo(n)%Process_Channel(l) ) CYCLE Channel_Loop
-
-            k = minloc(activate_thread,1)
-            IF( activate_thread(k) == 0 ) THEN
-              nt = k
-              activate_thread(k) = 1
-            END IF
             ! ...Shorter name
             ChannelIndex = ChannelInfo(n)%Channel_Index(l)
             ! ...Increment the processed channel counter
-!            ln = ln + 1
-            ln = ln_index(l)
+            ln = ln + 1
             ! ...Assign sensor+channel information to output
             RTSolution(ln,m)%Sensor_Id        = ChannelInfo(n)%Sensor_Id
             RTSolution(ln,m)%WMO_Satellite_Id = ChannelInfo(n)%WMO_Satellite_Id
@@ -995,7 +1021,7 @@ CONTAINS
             CALL CRTM_RTSolution_Zero( RTSolution_Clear(nt) )
             CALL CRTM_RTSolution_Zero( RTSolution_Clear_K(nt) )
 
-
+!         print *,' Liu  check - 004 ',nt,l,ln
             ! Copy the input K-matrix atmosphere with extra layers if necessary
             Atm_K(nt) = CRTM_Atmosphere_AddLayerCopy( Atmosphere_K(ln,m), Atm%n_Added_Layers )
             ! ...Same for K-matrix CLEAR sky structure for fractional cloud coverage
@@ -1009,12 +1035,12 @@ CONTAINS
                        ChannelInfo(n)%Sensor_Channel(l), &
                        m
                 CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                activate_thread(k) = 0
                 CYCLE Channel_loop
               END IF
               CALL CRTM_Atmosphere_Zero( Atm_Clear_K(nt) )
             END IF
 
+!         print *,' Liu  check - 005 ',nt,l,ln,Error_status
 
             ! Determine the number of streams (n_Full_Streams) in up+downward directions
             IF ( Opt%Use_N_Streams ) THEN
@@ -1033,7 +1059,7 @@ CONTAINS
             ! ...Ensure clear-sky object dimensions are consistent
             AtmOptics_Clear_K(nt)%n_Legendre_Terms = AtmOptics_K(nt)%n_Legendre_Terms
 
-
+!         print *,' Liu  check - 006 ',nt,l,ln,Error_status
             ! Compute the gas absorption
             CALL CRTM_Compute_AtmAbsorption( SensorIndex   , &  ! Input
                                              ChannelIndex  , &  ! Input
@@ -1042,7 +1068,7 @@ CONTAINS
                                              AtmOptics(nt)     , &  ! Output
                                              AAvar(nt)           )  ! Internal variable output
 
-
+!         print *,' Liu  check - 007 ',nt,l,ln,Error_status
             ! Compute the molecular scattering properties
             ! ...Solar radiation
             IF( SC(SensorIndex)%Solar_Irradiance(ChannelIndex) > ZERO .AND. &
@@ -1074,7 +1100,6 @@ CONTAINS
                        ChannelInfo(n)%Sensor_Channel(l), &
                        m
                 CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                activate_thread(k) = 0
                 CYCLE Channel_loop
               END IF
             ELSE
@@ -1086,7 +1111,7 @@ CONTAINS
               END IF
             END IF
 
-
+!         print *,' Liu  check - 008 ',nt,l,ln,Error_status
             ! Copy the clear-sky AtmOptics
             IF ( CRTM_Atmosphere_IsFractional(cloud_coverage_flag) ) THEN
               Status_FWD = CRTM_AtmOptics_NoScatterCopy( AtmOptics(nt), AtmOptics_Clear(nt) )
@@ -1097,7 +1122,6 @@ CONTAINS
                        &", channel ",i0,", profile #",i0)' ) &
                        TRIM(ChannelInfo(n)%Sensor_ID), ChannelInfo(n)%Sensor_Channel(l), m
                 CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                activate_thread(k) = 0
                 CYCLE Channel_loop
               END IF
               ! Initialise the adjoint
@@ -1117,7 +1141,6 @@ CONTAINS
                        &", channel ",i0,", profile #",i0)' ) &
                        TRIM(ChannelInfo(n)%Sensor_ID), ChannelInfo(n)%Sensor_Channel(l), m
                 CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                activate_thread(k) = 0
                 CYCLE Channel_loop
               END IF
             END IF
@@ -1135,12 +1158,11 @@ CONTAINS
                        &", channel ",i0,", profile #",i0)' ) &
                        TRIM(ChannelInfo(n)%Sensor_ID), ChannelInfo(n)%Sensor_Channel(l), m
                 CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                activate_thread(k) = 0
                 CYCLE Channel_loop
               END IF
             END IF
 
-
+!         print *,' Liu  check - 009 ',nt,l,ln,Error_status
             ! Compute the combined atmospheric optical properties
             IF( AtmOptics(nt)%Include_Scattering ) THEN
               CALL CRTM_AtmOptics_Combine( AtmOptics(nt), AOvar(nt) )
@@ -1208,7 +1230,7 @@ CONTAINS
          END IF
         END IF
       END IF
-
+!         print *,' Liu  check - 010 ',nt,l,ln,Error_status
               ! --------------
               ! ...Fourier expansion over azimuth angle
 
@@ -1217,7 +1239,7 @@ CONTAINS
                 ! Set dependent component counters
                 RTV(nt)%mth_Azi = mth_Azi
                 SfcOptics(nt)%mth_Azi = mth_Azi
-
+!         print *,' Liu  check - 011 ',nt,l,ln,mth_Azi
                 ! Solve the forward radiative transfer problem
                 Error_Status = CRTM_Compute_RTSolution( &
                                  Atm             , &  ! Input
@@ -1234,11 +1256,10 @@ CONTAINS
                          &", channel ", i0,", profile #",i0)' ) &
                          TRIM(ChannelInfo(n)%Sensor_ID), ChannelInfo(n)%Sensor_Channel(l), m
                   CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                  activate_thread(k) = 0
                   CYCLE Channel_loop
                 END IF
 
-
+!         print *,' Liu  check - 012 ',nt,l,ln,mth_Azi
                 ! Repeat clear sky for fractionally cloudy atmospheres
            IF ( CRTM_Atmosphere_IsFractional(cloud_coverage_flag).and.RTV(nt)%mth_Azi==0 ) THEN
                   RTV_Clear(nt)%mth_Azi = RTV(nt)%mth_Azi
@@ -1258,11 +1279,10 @@ CONTAINS
                            &", channel ", i0,", profile #",i0)' ) &
                            TRIM(ChannelInfo(n)%Sensor_ID), ChannelInfo(n)%Sensor_Channel(l), m
                     CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                    activate_thread(k) = 0
                     CYCLE Channel_loop
                   END IF
           END IF
-          
+!         print *,' Liu  check - 013 ',nt,l,ln,mth_Azi          
          IF(mth_Azi == RTV(nt)%n_Azi) THEN
             ! Combine cloudy and clear radiances for fractional cloud coverage
             IF ( CRTM_Atmosphere_IsFractional(cloud_coverage_flag) ) THEN 
@@ -1284,13 +1304,13 @@ CONTAINS
               ! ...Save the cloud cover in the output structure
               RTSolution(ln,m)%Total_Cloud_Cover = CloudCover%Total_Cloud_Cover
             END IF
- 
+!         print *,' Liu  check - 014 ',nt,l,ln,mth_Azi 
               ! The radiance post-processing
               CALL Post_Process_RTSolution(RTSolution(ln,m), &
                                            NLTE_Predictor, &
                                            ChannelIndex, SensorIndex, &
                                            compute_antenna_correction, GeometryInfo)
-
+!         print *,' Liu  check - 015 ',nt,l,ln,mth_Azi
            IF ( SpcCoeff_IsInfraredSensor( SC(SensorIndex) ) .OR. &
                SpcCoeff_IsMicrowaveSensor( SC(SensorIndex) ) ) THEN
               ! Perform clear-sky post and pre-processing
@@ -1310,7 +1330,7 @@ CONTAINS
                                             NLTE_Predictor, NLTE_Predictor_K(nt), &
                                             ChannelIndex, SensorIndex, &
                                             compute_antenna_correction, GeometryInfo)
-
+!         print *,' Liu  check - 016 ',nt,l,ln,mth_Azi
               ! More fractionally cloudy atmospheres processing
               IF ( CRTM_Atmosphere_IsFractional(cloud_coverage_flag) ) THEN
                 ! The adjoint of the clear and cloudy radiance combination
@@ -1320,7 +1340,7 @@ CONTAINS
                 CloudCover_K(nt)%Total_Cloud_Cover = CloudCover_K(nt)%Total_Cloud_Cover + &
                            ((r_cloudy(1) - RTSolution_Clear(nt)%Radiance) * RTSolution_K(ln,m)%Radiance)
                 RTSolution_K(ln,m)%Radiance    = CloudCover%Total_Cloud_Cover * RTSolution_K(ln,m)%Radiance
-
+!         print *,' Liu  check - 017 ',nt,l,ln,mth_Azi
              END IF
 
            END IF
@@ -1351,12 +1371,11 @@ CONTAINS
                        &", channel ", i0,", profile #",i0)' ) &
                        TRIM(ChannelInfo(n)%Sensor_ID), ChannelInfo(n)%Sensor_Channel(l), m
                 CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                activate_thread(k) = 0
                 CYCLE Channel_loop
               END IF
             END IF
         
-          
+!          print *,' Liu  check - 018 ',nt,l,ln,mth_Azi         
                 ! The adjoint of the radiative transfer
                 Error_Status = CRTM_Compute_RTSolution_AD( &
                                  Atm               , &  ! FWD Input
@@ -1378,9 +1397,9 @@ CONTAINS
                          &", channel ", i0,", profile #",i0)' ) &
                          TRIM(ChannelInfo(n)%Sensor_ID), ChannelInfo(n)%Sensor_Channel(l), m
                   CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                  activate_thread(k) = 0
                   CYCLE Channel_loop
                 END IF
+!         print *,' Liu  check - 019 ',nt,l,ln,mth_Azi
               END DO Azimuth_Fourier_Loop
 
 ! The following part corresponding TL part is moved from above CRTM_Compute_RTSolution
@@ -1405,6 +1424,7 @@ CONTAINS
               END IF
             END IF
       END IF
+!         print *,' Liu  check - 020 ',nt,l,ln,mth_Azi
             ! ###################################################
             ! TEMPORARY FIX : SENSOR-DEPENDENT AZIMUTH ANGLE LOOP
             ! ###################################################
@@ -1430,8 +1450,7 @@ CONTAINS
             IF( AtmOptics(nt)%Include_Scattering ) THEN
               CALL CRTM_AtmOptics_Combine_AD( AtmOptics(nt), AtmOptics_K(nt), AOvar(nt) )
             END IF
-
-
+!         print *,' Liu  check - 021 ',nt,l,ln, Error_Status
             ! Compute the adjoint aerosol absorption/scattering properties
             IF ( Atm%n_Aerosols > 0 ) THEN
               Error_Status = CRTM_Compute_AerosolScatter_AD( Atm         , &  ! FWD Input
@@ -1446,7 +1465,6 @@ CONTAINS
                        &", channel ",i0,", profile #",i0)' ) &
                        TRIM(ChannelInfo(n)%Sensor_ID), ChannelInfo(n)%Sensor_Channel(l), m
                 CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                activate_thread(k) = 0
                 CYCLE Channel_loop
               END IF
             END IF
@@ -1466,12 +1484,12 @@ CONTAINS
                        &", channel ",i0,", profile #",i0)' ) &
                        TRIM(ChannelInfo(n)%Sensor_ID), ChannelInfo(n)%Sensor_Channel(l), m
                 CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                activate_thread(k) = 0
                 CYCLE Channel_loop
               END IF
             END IF
 
-
+!         print *,' Liu  check - 022 ',nt,l,ln, Error_Status
+!   IF(nt < 0) THEN
             ! Adjoint of clear-sky AtmOptics copy
             IF ( CRTM_Atmosphere_IsFractional(cloud_coverage_flag) ) THEN
               Error_Status = CRTM_AtmOptics_NoScatterCopy_AD( AtmOptics(nt), AtmOptics_Clear_K(nt), AtmOptics_K(nt) )
@@ -1480,12 +1498,11 @@ CONTAINS
                        &", channel ",i0,", profile #",i0)' ) &
                        TRIM(ChannelInfo(n)%Sensor_ID), ChannelInfo(n)%Sensor_Channel(l), m
                 CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                activate_thread(k) = 0
                 CYCLE Channel_loop
               END IF
             END IF
 
-
+!   IF(nt < 0) THEN
             ! Compute the adjoint molecular scattering properties
             IF( RTV(nt)%Visible_Flag_true ) THEN
               Wavenumber = SC(SensorIndex)%Wavenumber(ChannelIndex)
@@ -1500,12 +1517,11 @@ CONTAINS
                        ChannelInfo(n)%Sensor_Channel(l), &
                        m
                 CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                activate_thread(k) = 0
                 CYCLE Channel_loop
               END IF
             END IF
 
-
+!   IF(nt < 0) THEN
             ! Compute the adjoint gaseous absorption
             CALL CRTM_Compute_AtmAbsorption_AD( SensorIndex , &  ! Input
                                                 ChannelIndex, &  ! Input
@@ -1523,7 +1539,8 @@ CONTAINS
                      Atm_K(nt)              )  ! Output
             END IF
 
-
+!         print *,' Liu  check - 023 ',nt,l,ln, Error_Status
+!   IF(nt < 0) THEN
             ! K-matrix of the predictor calculations
             CALL CRTM_Compute_Predictors_AD( SensorIndex   , &  ! Input
                                              Atm           , &  ! FWD Input
@@ -1536,7 +1553,7 @@ CONTAINS
             ! K-matrix of average surface skin temperature for multi-surface types
             CALL CRTM_Compute_SurfaceT_AD( Surface(m), SfcOptics_K(nt), Surface_K(ln,m) )
 
-
+!   IF(nt < 0) THEN
             ! Adjoint of cloud cover setup
             IF ( CRTM_Atmosphere_IsFractional(cloud_coverage_flag) ) THEN
 
@@ -1555,7 +1572,6 @@ CONTAINS
                        ChannelInfo(n)%Sensor_Channel(l), &
                        m
                 CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                activate_thread(k) = 0
                 CYCLE Channel_loop
               END IF
 
@@ -1570,7 +1586,6 @@ CONTAINS
                        ChannelInfo(n)%Sensor_Channel(l), &
                        m
                 CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-                activate_thread(k) = 0
                 CYCLE Channel_loop
               END IF
             END IF
@@ -1586,27 +1601,23 @@ CONTAINS
                      ChannelInfo(n)%Sensor_Channel(l), &
                      m
               CALL Display_Message( ROUTINE_NAME, Message, Error_Status )
-              activate_thread(k) = 0
               CYCLE Channel_loop
             END IF
-              activate_thread(k) = 0
+!   END IF
           END DO Channel_Loop
-
+        END DO Thread_Loop
 !$OMP END PARALLEL DO
-
-      DEALLOCATE( activate_thread )
-
+!         print *,' Liu  check - 024 ',nt,l,ln, Error_Status
         IF ( Error_Status == FAILURE ) RETURN
 
       END DO Sensor_Loop
 
-      DEALLOCATE( ln_index )
       ! Deallocate local sensor independent data structures
       ! ...Atmospheric optics
       ! Clean up
       CALL CRTM_Atmosphere_Destroy( Atm )
       CALL CRTM_Atmosphere_Destroy( Atm_Clear )
-
+!         print *,' Liu  check - 025 ',nt,l,ln, Error_Status
 
 !$OMP PARALLEL DO NUM_THREADS(n_channel_threads)
 !!      CALL CRTM_Predictor_Destroy( Predictor )

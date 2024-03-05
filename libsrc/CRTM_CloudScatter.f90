@@ -265,6 +265,7 @@ CONTAINS
                                 Atm%Cloud(n)%Effective_Radius(kc), & ! Input
                                 Atm%Temperature(kc)              , & ! Input
                                 CSV%ke(kc,n)                     , & ! Output
+                                CSV%kb(kc,n)                     , & ! Output
                                 CSV%w(kc,n)                      , & ! Output
                                 CSV%pcoeff(:,:,kc,n)             , & ! Output
                                 CSV%csi(kc,n)                      ) ! Interpolation
@@ -277,11 +278,13 @@ CONTAINS
                                 Atm%Cloud(n)%Type                , & ! Input
                                 Atm%Cloud(n)%Effective_Radius(kc), & ! Input
                                 CSV%ke(kc,n)                     , & ! Output
+                                CSV%kb(kc,n)                     , & ! Output
                                 CSV%w(kc,n)                      , & ! Output
                                 CSV%pcoeff(:,:,kc,n)             , & ! Output
                                 CSV%csi(kc,n)                      ) ! Interpolation
         ELSE
           CSV%ke(kc,n)         = ZERO
+          CSV%kb(kc,n)         = ZERO
           CSV%w(kc,n)          = ZERO
           CSV%pcoeff(:,:,kc,n) = ZERO
         END IF
@@ -289,6 +292,7 @@ CONTAINS
         ! interpolation quality control
         IF( CSV%ke(kc,n) <= ZERO ) THEN
           CSV%ke(kc,n) = ZERO
+          CSV%kb(kc,n) = ZERO
           CSV%w(kc,n)  = ZERO
         END IF
         IF( CSV%w(kc,n) <= ZERO ) THEN
@@ -317,7 +321,8 @@ CONTAINS
         ! compute the single scatter albedo in the Layer_loop below.
         CScat%Optical_Depth(kc) = CScat%Optical_Depth(kc) + &
                                   (CSV%ke(kc,n)*Atm%Cloud(n)%Water_Content(kc))
-
+        CScat%Back_Scattering(kc) = CScat%Back_Scattering(kc) + &
+                                  (CSV%kb(kc,n)*Atm%Cloud(n)%Water_Content(kc))
         ! Compute the phase matrix coefficients
         !   p = p + p(LUT)*bs
         ! where
@@ -842,6 +847,7 @@ CONTAINS
                                cloud_type  , &  ! Input  see CRTM_Cloud_Define.f90
                                Reff        , &  ! Input  effective radius (mm)
                                ke          , &  ! Output optical depth for 1 mm water content
+                               kb          , &  ! Output back scattering for 1 mm water content
                                w           , &  ! Output single scattering albedo
                                pcoeff      , &  ! Output spherical Legendre coefficients
                                csi           )  ! Output interpolation data
@@ -850,7 +856,7 @@ CONTAINS
     REAL(fp)                  , INTENT(IN)     :: Frequency
     INTEGER                   , INTENT(IN)     :: Cloud_Type
     REAL(fp)                  , INTENT(IN)     :: Reff
-    REAL(fp)                  , INTENT(OUT)    :: ke
+    REAL(fp)                  , INTENT(OUT)    :: ke, kb
     REAL(fp)                  , INTENT(OUT)    :: w
     REAL(fp)                  , INTENT(IN OUT) :: pcoeff(0:,:)
     TYPE(CSinterp_type)       , INTENT(IN OUT) :: csi
@@ -892,6 +898,7 @@ CONTAINS
     ! Perform interpolation
     ! ---------------------
     CALL interp_2D( CloudC%ke_IR(csi%i1:csi%i2,csi%j1:csi%j2,k), csi%wlp, csi%xlp, ke )
+    CALL interp_2D( CloudC%kb_IR(csi%i1:csi%i2,csi%j1:csi%j2,k), csi%wlp, csi%xlp, kb )
     CALL interp_2D( CloudC%w_IR(csi%i1:csi%i2,csi%j1:csi%j2,k) , csi%wlp, csi%xlp, w  )
     IF (CloudScatter%n_Phase_Elements > 0 .and. CloudScatter%Include_Scattering ) THEN
       pcoeff(0,1) = POINT_5
@@ -1160,6 +1167,7 @@ CONTAINS
                                Reff        , &  ! Input  effective radius (mm)
                                Temperature , &  ! Input  cloudy temperature
                                ke          , &  ! Input optical depth for 1 mm water content
+                               kb          , &  ! Input backscattering for 1 mm water content
                                w           , &  ! Input single scattering albedo
                                pcoeff      , &  ! Output spherical Legendre coefficients
                                csi           )  ! Output interpolation data
@@ -1169,7 +1177,7 @@ CONTAINS
     INTEGER                   , INTENT(IN)     :: Cloud_Type
     REAL(fp)                  , INTENT(IN)     :: Reff
     REAL(fp)                  , INTENT(IN)     :: Temperature
-    REAL(fp)                  , INTENT(OUT)    :: ke
+    REAL(fp)                  , INTENT(OUT)    :: ke, kb
     REAL(fp)                  , INTENT(OUT)    :: w
     REAL(fp)                  , INTENT(IN OUT) :: pcoeff(0:,:)
     TYPE(CSinterp_type)       , INTENT(IN OUT) :: csi
@@ -1220,10 +1228,11 @@ CONTAINS
       CASE (WATER_CLOUD)
         j = 1
         CALL interp_2D( CloudC%ke_L_MW(csi%i1:csi%i2,j,csi%k1:csi%k2), csi%wlp, csi%ylp, ke )
-
+        CALL interp_2D( CloudC%kb_L_MW(csi%i1:csi%i2,j,csi%k1:csi%k2), csi%wlp, csi%ylp, kb )
       ! All 3-D interpolations for rain cloud!
       CASE (RAIN_CLOUD)
         CALL interp_3D( CloudC%ke_L_MW(csi%i1:csi%i2,csi%j1:csi%j2,csi%k1:csi%k2), csi%wlp, csi%xlp, csi%ylp, ke )
+        CALL interp_3D( CloudC%kb_L_MW(csi%i1:csi%i2,csi%j1:csi%j2,csi%k1:csi%k2), csi%wlp, csi%xlp, csi%ylp, kb )
         CALL interp_3D( CloudC%w_L_MW(csi%i1:csi%i2,csi%j1:csi%j2,csi%k1:csi%k2) , csi%wlp, csi%xlp, csi%ylp, w  )
         IF ( CloudScatter%n_Phase_Elements > 0 .and. CloudScatter%Include_Scattering ) THEN
           pcoeff(0,1) = POINT_5
@@ -1244,7 +1253,8 @@ CONTAINS
       CASE (ICE_CLOUD)
         j = 1; k = 3
         CALL interp_1D( CloudC%ke_S_MW(csi%i1:csi%i2,j,k), csi%wlp, ke )
-
+        CALL interp_1D( CloudC%kb_S_MW(csi%i1:csi%i2,j,k), csi%wlp, kb )
+        
       ! The remaining cloud types have 2-D interpolation
       ! as a fn. of frequency and radius
       CASE DEFAULT
@@ -1256,6 +1266,7 @@ CONTAINS
         END SELECT
         ! Perform interpolation
         CALL interp_2D( CloudC%ke_S_MW(csi%i1:csi%i2,csi%j1:csi%j2,k), csi%wlp, csi%xlp, ke )
+        CALL interp_2D( CloudC%kb_S_MW(csi%i1:csi%i2,csi%j1:csi%j2,k), csi%wlp, csi%xlp, kb )
         CALL interp_2D( CloudC%w_S_MW(csi%i1:csi%i2,csi%j1:csi%j2,k) , csi%wlp, csi%xlp, w  )
         IF (CloudScatter%n_Phase_Elements > 0 .and. CloudScatter%Include_Scattering ) THEN
           pcoeff(0,1) = POINT_5

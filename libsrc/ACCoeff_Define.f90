@@ -44,7 +44,6 @@ MODULE ACCoeff_Define
   PUBLIC :: ACCoeff_Inspect
   PUBLIC :: ACCoeff_ValidRelease
   PUBLIC :: ACCoeff_Info
-  PUBLIC :: ACCoeff_DefineVersion
   PUBLIC :: ACCoeff_Subset
   PUBLIC :: ACCoeff_Concat
   PUBLIC :: ACCoeff_ChannelReindex
@@ -61,9 +60,6 @@ MODULE ACCoeff_Define
   ! -----------------
   ! Module parameters
   ! -----------------
-  ! Version Id for the module
-  CHARACTER(*), PARAMETER :: MODULE_VERSION_ID = &
-  '$Id: ACCoeff_Define.f90 14334 2011-06-21 13:43:46Z paul.vandelst@noaa.gov $'
   ! Literal constants
   REAL(Double), PARAMETER :: ZERO = 0.0_Double
   REAL(Double), PARAMETER :: ONE  = 1.0_Double
@@ -439,36 +435,6 @@ CONTAINS
 
   END SUBROUTINE ACCoeff_Info
  
- 
-!--------------------------------------------------------------------------------
-!:sdoc+:
-!
-! NAME:
-!       ACCoeff_DefineVersion
-!
-! PURPOSE:
-!       Subroutine to return the module version information.
-!
-! CALLING SEQUENCE:
-!       CALL ACCoeff_DefineVersion( Id )
-!
-! OUTPUTS:
-!       Id:    Character string containing the version Id information
-!              for the module.
-!              UNITS:      N/A
-!              TYPE:       CHARACTER(*)
-!              DIMENSION:  Scalar
-!              ATTRIBUTES: INTENT(OUT)
-!
-!:sdoc-:
-!--------------------------------------------------------------------------------
-
-  SUBROUTINE ACCoeff_DefineVersion( Id )
-    CHARACTER(*), INTENT(OUT) :: Id
-    Id = MODULE_VERSION_ID
-  END SUBROUTINE ACCoeff_DefineVersion
-
-
 !--------------------------------------------------------------------------------
 !:sdoc+:
 !

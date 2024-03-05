@@ -27,7 +27,8 @@ MODULE CRTM_Forward_Module
                                         MAX_N_STREAMS, &
                                         AIRCRAFT_PRESSURE_THRESHOLD, &
                                         MIN_COVERAGE_THRESHOLD, &
-                                        SCATTERING_ALBEDO_THRESHOLD
+                                        SCATTERING_ALBEDO_THRESHOLD, DEGREES_TO_RADIANS
+  USE ODPS_CoordinateMapping,     ONLY: Geopotential_Height
   USE CRTM_TauCoeff,              ONLY: TC
   USE CRTM_SpcCoeff,              ONLY: SC, &
                                         SpcCoeff_IsVisibleSensor, &
@@ -249,7 +250,7 @@ CONTAINS
     ! Local variables
     CHARACTER(256) :: Message
     LOGICAL :: Options_Present
-    INTEGER :: n_Sensors
+    INTEGER :: n_Sensors, i, H2O_idx
     INTEGER :: n_Channels
     INTEGER :: m, n_Profiles, nc
     ! Local ancillary input structure
@@ -270,7 +271,10 @@ CONTAINS
     INTEGER :: n_omp_threads
     INTEGER :: n_profile_threads
     INTEGER :: n_channel_threads
-
+    !
+!    REAL(fp) :: Height(0:MAX_N_LAYERS)
+    REAL(fp), Allocatable :: Height(:,:)
+    REAL(fp), PARAMETER :: Earth_Radius = 6370.0_fp
     ! ------
     ! SET UP
     ! ------
@@ -300,6 +304,9 @@ CONTAINS
     ! Check the number of profiles
     ! ...Number of atmospheric profiles.
     n_Profiles = SIZE(Atmosphere)
+    
+    Allocate( Height(0:MAX_N_LAYERS,n_Profiles) )
+    
     ! ...Check the profile dimensionality of the other mandatory arguments
     IF ( SIZE(Surface)          /= n_Profiles .OR. &
          SIZE(Geometry)         /= n_Profiles .OR. &
@@ -335,8 +342,10 @@ CONTAINS
     ! to parallelize channels
 !    IF ( n_omp_threads <= n_Profiles ) THEN
 
-    IF ( n_omp_threads < 0 ) THEN
-    
+!!  parallel for profile loop only now
+    IF ( n_omp_threads > n_Profiles ) n_omp_threads = n_Profiles
+    IF ( n_Profiles == 1) n_omp_threads = 1
+    IF ( n_omp_threads <= n_Profiles ) THEN    
       n_profile_threads = n_omp_threads
       n_channel_threads = 1
       CALL OMP_SET_MAX_ACTIVE_LEVELS(1)
@@ -370,11 +379,21 @@ CONTAINS
     ! ------------
     ! PROFILE LOOPS
     ! ------------
-    
+    H2O_idx = 1
+    DO m = 1, n_Profiles
+   ! new, calculate height-dependent cosine of sun zenith angle
+    CALL Geopotential_Height(Atmosphere(m)%Level_Pressure      , & ! Input
+                            Atmosphere(m)%Temperature         , & ! Input
+                            Atmosphere(m)%Absorber(:, H2O_idx), & ! Input
+                            ZERO                    , & ! Input - surface height
+                            Height(0:Atmosphere(m)%n_Layers,m) ) ! Output in km    
+    END DO
 !JR First loop just checks validity of Atmosphere(m) contents
 !$OMP PARALLEL DO PRIVATE ( nc, Message ) NUM_THREADS(n_profile_threads)
     Profile_Loop1: DO m = 1, n_Profiles
- 
+!     print *,' Liu A0 ',Atmosphere(m)%n_Clouds,Atmosphere(m)%n_Aerosols, &
+!       CRTM_AerosolCoeff_IsLoaded()
+
        ! Fix for cloud_Fraction < MIN_COVERAGE_THRESHOLD
        IF ( Atmosphere(m)%n_Clouds > 0) THEN
           !** clear clouds where cloud_fraction < threshold
@@ -877,6 +896,7 @@ CONTAINS
 
             ! Channel setup
             ! ...Skip channel if requested
+            IF ( l > n_sensor_channels ) CYCLE Channel_Loop
             IF ( .NOT. ChannelInfo(n)%Process_Channel(l) ) CYCLE Channel_Loop
             ! ...Shorter name
             ChannelIndex = ChannelInfo(n)%Channel_Index(l)
@@ -919,13 +939,16 @@ CONTAINS
             ! ...Solar radiation
             IF ( SC(SensorIndex)%Solar_Irradiance(ChannelIndex) > ZERO .AND. &
                  Source_ZA < MAX_SOURCE_ZENITH_ANGLE ) THEN
-              RTV%Solar_Flag_true = .TRUE.
-              IF ( CRTM_Atmosphere_IsFractional(cloud_coverage_flag) ) RTV_Clear%Solar_Flag_true = .TRUE.
+!              RTV%Solar_Flag_true = .TRUE.
+              RTV(nt)%Solar_Flag_true = .TRUE.
+!              IF ( CRTM_Atmosphere_IsFractional(cloud_coverage_flag) ) RTV_Clear%Solar_Flag_true = .TRUE.
+              IF ( CRTM_Atmosphere_IsFractional(cloud_coverage_flag) ) RTV_Clear(nt)%Solar_Flag_true = .TRUE.
             END IF
             ! ...Visible channel with solar radiation
           IF ( (SpcCoeff_IsVisibleSensor(SC(SensorIndex)).or.SpcCoeff_IsUltravioletSensor(SC(SensorIndex))) &
                 .AND. RTV(nt)%Solar_Flag_true ) THEN
-              RTV%Visible_Flag_true = .TRUE.
+!              RTV%Visible_Flag_true = .TRUE.
+              RTV(nt)%Visible_Flag_true = .TRUE.
               ! Rayleigh phase function has 0, 1, 2 components.
               IF( AtmOptics(nt)%n_Legendre_Terms < 4 ) THEN
                 AtmOptics(nt)%n_Legendre_Terms = 4
@@ -1042,6 +1065,16 @@ CONTAINS
               END IF
             END IF
           END IF
+
+!  Calculate height-dependent local solar zenith
+     RTV(nt)%COS_SUN = COS(Source_ZA*DEGREES_TO_RADIANS)
+      IF(RTV(nt)%COS_SUN > ZERO) THEN
+        DO i = 1, Atmosphere(m)%n_Layers
+          RTV(nt)%Layer_Cos_SolarZA(i) = sqrt( ONE-(ONE-RTV(nt)%COS_SUN**2)* &
+           (Earth_Radius/(Earth_Radius+Height(i,m)) )**2 )
+!       write(6,'(3I4,3f12.5)') nt,i,m,RTV(nt)%COS_SUN,RTV(nt)%Layer_Cos_SolarZA(i),Height(i,m)
+        END DO
+      END IF
 
 !  non scattering case, this condition may be changed for future surface reflectance 
       IF( .not.RTSolution(ln,m)%Scattering_FLAG .or. .not.AtmOptics(nt)%Include_Scattering ) RTV(nt)%n_Azi = 0

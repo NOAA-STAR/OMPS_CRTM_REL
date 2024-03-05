@@ -433,6 +433,9 @@ CONTAINS
                                CloudCoeff%pcoeff_L_MW
     END IF
     
+    
+    print *,' Liu kb_L_MW ',maxval(CloudCoeff%kb_L_MW),minval(CloudCoeff%kb_L_MW)
+    
     IF ( io_stat /= 0 ) THEN
       WRITE( msg,'("Error reading microwave liquid phase data. IOSTAT = ",i0)' ) io_stat
       CALL Read_Cleanup(); RETURN
@@ -450,6 +453,8 @@ CONTAINS
                                CloudCoeff%kb_S_MW     , &
                                CloudCoeff%pcoeff_S_MW    
     END IF
+
+    print *,' Liu kb_S_MW ',maxval(CloudCoeff%kb_S_MW),minval(CloudCoeff%kb_S_MW)
     
     IF ( io_stat /= 0 ) THEN
       WRITE( msg,'("Error reading microwave solid phase data. IOSTAT = ",i0)' ) io_stat

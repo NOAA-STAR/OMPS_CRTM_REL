@@ -137,6 +137,7 @@ MODULE RTV_Define
 
     ! Emission model variables
     REAL(fp) :: Total_OD  = ZERO
+    REAL(fp), DIMENSION(   MAX_N_LAYERS ) :: Layer_Cos_SolarZA  = ZERO
     REAL(fp), DIMENSION(   MAX_N_LAYERS ) :: e_Layer_Trans_UP   = ZERO
     REAL(fp), DIMENSION(   MAX_N_LAYERS ) :: e_Layer_Trans_DOWN = ZERO
     REAL(fp), DIMENSION( 0:MAX_N_LAYERS ) :: e_Level_Rad_UP     = ZERO

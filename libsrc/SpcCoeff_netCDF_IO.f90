@@ -70,7 +70,6 @@ MODULE SpcCoeff_netCDF_IO
 
   ! Dimension names
   CHARACTER(*), PARAMETER :: CHANNEL_DIMNAME = 'n_Channels'
-  CHARACTER(*), PARAMETER :: FOV_DIMNAME     = 'n_Fovs'
 
 
   ! Variable names.
@@ -87,9 +86,6 @@ MODULE SpcCoeff_netCDF_IO
   CHARACTER(*), PARAMETER :: BAND_C2_VARNAME          = 'Band_C2'
   CHARACTER(*), PARAMETER :: CBR_VARNAME              = 'Cosmic_Background_Radiance'
   CHARACTER(*), PARAMETER :: SOLAR_IRRADIANCE_VARNAME = 'Solar_Irradiance'
-  CHARACTER(*), PARAMETER :: AllFREQUENCY_VARNAME     = 'All_Frequency'
-  CHARACTER(*), PARAMETER :: AllWAVENUMBER_VARNAME    = 'All_Wavenumber'
-  CHARACTER(*), PARAMETER :: AllSOLAR_IRRADIANCE_VARNAME = 'All_Solar_Irradiance'
 
 
   ! Variable long name attribute.
@@ -108,9 +104,6 @@ MODULE SpcCoeff_netCDF_IO
   CHARACTER(*), PARAMETER :: BAND_C2_LONGNAME          = 'Band C2'
   CHARACTER(*), PARAMETER :: CBR_LONGNAME              = 'Cosmic Background Radiance'
   CHARACTER(*), PARAMETER :: SOLAR_IRRADIANCE_LONGNAME = 'Kurucz Solar Irradiance'
-  CHARACTER(*), PARAMETER :: AllFREQUENCY_LONGNAME     = 'Frequency'
-  CHARACTER(*), PARAMETER :: AllWAVENUMBER_LONGNAME    = 'Wavenumber'
-  CHARACTER(*), PARAMETER :: AllSOLAR_IRRADIANCE_LONGNAME = 'Kurucz Solar Irradiance'
 
 
   ! Variable description attribute.
@@ -129,9 +122,6 @@ MODULE SpcCoeff_netCDF_IO
   CHARACTER(*), PARAMETER :: BAND_C2_DESCRIPTION          = 'Polychromatic band correction slope'
   CHARACTER(*), PARAMETER :: CBR_DESCRIPTION              = 'Planck radiance for the cosmic background temperature'
   CHARACTER(*), PARAMETER :: SOLAR_IRRADIANCE_DESCRIPTION = 'TOA solar irradiance using Kurucz spectrum'
-  CHARACTER(*), PARAMETER :: AllFREQUENCY_DESCRIPTION     = 'Channel central frequency, f'
-  CHARACTER(*), PARAMETER :: AllWAVENUMBER_DESCRIPTION    = 'Channel central wavenumber, v'
-  CHARACTER(*), PARAMETER :: AllSOLAR_IRRADIANCE_DESCRIPTION = 'TOA solar irradiance using Kurucz spectrum'
 
 
   ! Variable units attribute.
@@ -150,9 +140,6 @@ MODULE SpcCoeff_netCDF_IO
   CHARACTER(*), PARAMETER :: BAND_C2_UNITS          = 'K/K'
   CHARACTER(*), PARAMETER :: CBR_UNITS              = 'mW/(m^2.sr.cm^-1)'
   CHARACTER(*), PARAMETER :: SOLAR_IRRADIANCE_UNITS = 'mW/(m^2.cm^-1)'
-  CHARACTER(*), PARAMETER :: AllFREQUENCY_UNITS     = 'Gigahertz (GHz)'
-  CHARACTER(*), PARAMETER :: AllWAVENUMBER_UNITS    = 'Inverse centimetres (cm^-1)'
-  CHARACTER(*), PARAMETER :: AllSOLAR_IRRADIANCE_UNITS = 'mW/(m^2.cm^-1)'
 
 
   ! Variable _FillValue attribute.
@@ -171,9 +158,6 @@ MODULE SpcCoeff_netCDF_IO
   REAL(Double),  PARAMETER :: BAND_C2_FILLVALUE          = ZERO
   REAL(Double),  PARAMETER :: CBR_FILLVALUE              = ZERO
   REAL(Double),  PARAMETER :: SOLAR_IRRADIANCE_FILLVALUE = ZERO
-  REAL(Double),  PARAMETER :: AllFREQUENCY_FILLVALUE     = ZERO
-  REAL(Double),  PARAMETER :: AllWAVENUMBER_FILLVALUE    = ZERO
-  REAL(Double),  PARAMETER :: AllSOLAR_IRRADIANCE_FILLVALUE = ZERO
 
 
   ! Variable netCDF datatypes
@@ -190,9 +174,6 @@ MODULE SpcCoeff_netCDF_IO
   INTEGER, PARAMETER :: BAND_C2_TYPE          = NF90_DOUBLE
   INTEGER, PARAMETER :: CBR_TYPE              = NF90_DOUBLE
   INTEGER, PARAMETER :: SOLAR_IRRADIANCE_TYPE = NF90_DOUBLE
-  INTEGER, PARAMETER :: AllFREQUENCY_TYPE        = NF90_DOUBLE
-  INTEGER, PARAMETER :: AllWAVENUMBER_TYPE       = NF90_DOUBLE
-  INTEGER, PARAMETER :: AllSOLAR_IRRADIANCE_TYPE = NF90_DOUBLE
 
 
 CONTAINS
@@ -219,7 +200,6 @@ CONTAINS
 !       Error_Status = SpcCoeff_netCDF_InquireFile( &
 !                        Filename, &
 !                        n_Channels       = n_Channels      , &
-!                        n_Fovs           = n_Fovs          , &
 !                        Release          = Release         , &
 !                        Version          = Version         , &
 !                        Sensor_Id        = Sensor_Id       , &
@@ -239,12 +219,6 @@ CONTAINS
 !
 ! OPTIONAL OUTPUTS:
 !       n_Channels:         Total number of sensor channels.
-!                           UNITS:      N/A
-!                           TYPE:       INTEGER
-!                           DIMENSION:  Scalar
-!                           ATTRIBUTES: INTENT(OUT), OPTIONAL
-!
-!       n_Channels:         Total number of sensor fovs.
 !                           UNITS:      N/A
 !                           TYPE:       INTEGER
 !                           DIMENSION:  Scalar
@@ -317,7 +291,6 @@ CONTAINS
   FUNCTION SpcCoeff_netCDF_InquireFile( &
     Filename        , &  ! Input
     n_Channels      , &  ! Optional output  
-    n_Fovs          , &  ! Optional output
     Release         , &  ! Optional Output
     Version         , &  ! Optional Output
     Sensor_Id       , &  ! Optional Output
@@ -330,7 +303,6 @@ CONTAINS
     ! Arguments
     CHARACTER(*),           INTENT(IN)  :: Filename
     INTEGER     , OPTIONAL, INTENT(OUT) :: n_Channels
-    INTEGER     , OPTIONAL, INTENT(OUT) :: n_Fovs
     INTEGER     , OPTIONAL, INTENT(OUT) :: Release
     INTEGER     , OPTIONAL, INTENT(OUT) :: Version
     CHARACTER(*), OPTIONAL, INTENT(OUT) :: Sensor_Id       
@@ -350,8 +322,6 @@ CONTAINS
     INTEGER :: fileid
     INTEGER :: dimid
     TYPE(SpcCoeff_type) :: spccoeff
-    INTEGER :: n_Dims
-    INTEGER :: n_File_Fovs
     
     ! Set up
     err_stat = SUCCESS
@@ -370,17 +340,6 @@ CONTAINS
 
 
     ! Get the dimensions
-    ! ------------------
-    ! How many are there?
-    nf90_Status = NF90_INQUIRE( FileId, &
-                                nDimensions = n_Dims )
-    IF ( nf90_Status /= NF90_NOERR ) THEN
-      msg = 'Error obtaining dimension information from '//TRIM(Filename)//&
-            ' - '//TRIM(NF90_STRERROR( nf90_Status ))
-      CALL Inquire_Cleanup(); RETURN
-    END IF
-
-    ! Get the dimensions
     ! ...n_Channels dimension
     nf90_status = NF90_INQ_DIMID( FileId,CHANNEL_DIMNAME,DimId )
     IF ( nf90_status /= NF90_NOERR ) THEN
@@ -395,23 +354,6 @@ CONTAINS
       CALL Inquire_Cleanup(); RETURN
     END IF
   
-    ! The number of  n_Fovs
-    n_File_Fovs = 0
-    IF ( n_Dims > 1 ) THEN
-      nf90_status = NF90_INQ_DIMID( FileId,FOV_DIMNAME,DimId )
-      IF ( nf90_status /= NF90_NOERR ) THEN
-        msg = 'Error inquiring dimension ID for '//FOV_DIMNAME//' - '// &
-              TRIM(NF90_STRERROR( nf90_status ))
-        CALL Inquire_Cleanup(); RETURN
-      END IF
-      nf90_status = NF90_INQUIRE_DIMENSION( FileId,DimId,Len=n_File_Fovs )
-      IF ( nf90_status /= NF90_NOERR ) THEN
-        msg = 'Error reading dimension value for '//FOV_DIMNAME//' - '// &
-              TRIM(NF90_STRERROR( nf90_status ))
-        CALL Inquire_Cleanup(); RETURN
-      END IF
-    END IF
-
   
     ! Get the global attributes
     err_stat = ReadGAtts( Filename, &
@@ -441,7 +383,6 @@ CONTAINS
 
     ! Set the return values
     IF ( PRESENT(n_Channels) ) n_Channels = spccoeff%n_Channels
-    IF ( PRESENT(n_Fovs) )     n_Fovs     = n_File_Fovs
 
   CONTAINS
  
@@ -586,7 +527,6 @@ CONTAINS
                  Filename                                    , &  ! Input
                  SpcCoeff%n_Channels                         , &  ! Input
                  fileid                                      , &  ! Output
-                 n_fovs           = SpcCoeff%nFovs            , &  ! Optional input
                  Version          = SpcCoeff%Version         , &  ! Optional input
                  Sensor_Id        = SpcCoeff%Sensor_Id       , &  ! Optional input
                  WMO_Satellite_Id = SpcCoeff%WMO_Satellite_Id, &  ! Optional input
@@ -774,48 +714,6 @@ CONTAINS
             ' - '//TRIM(NF90_STRERROR( NF90_Status ))
       CALL Write_Cleanup(); RETURN
     END IF
-    ! Multiple FOVS
-    IF ( SpcCoeff%nFOVs > 1 )THEN
-      ! ...AllFrequency variable
-      NF90_Status = NF90_INQ_VARID( FileId,AllFREQUENCY_VARNAME,VarId )
-      IF ( NF90_Status /= NF90_NOERR ) THEN
-        msg = 'Error inquiring '//TRIM(Filename)//' for '//AllFREQUENCY_VARNAME//&
-              ' variable ID - '//TRIM(NF90_STRERROR( NF90_Status ))
-        CALL Write_Cleanup(); RETURN
-      END IF
-      NF90_Status = NF90_PUT_VAR( FileId,VarID,SpcCoeff%AllFrequency )
-      IF ( NF90_Status /= NF90_NOERR ) THEN
-        msg = 'Error writing '//AllFREQUENCY_VARNAME//' to '//TRIM(Filename)//&
-            ' - '//TRIM(NF90_STRERROR( NF90_Status ))
-        CALL Write_Cleanup(); RETURN
-      END IF
-      ! ...AllWavenumber variable
-      NF90_Status = NF90_INQ_VARID( FileId,AllWAVENUMBER_VARNAME,VarId )
-      IF ( NF90_Status /= NF90_NOERR ) THEN
-        msg = 'Error inquiring '//TRIM(Filename)//' for '//AllWAVENUMBER_VARNAME//&
-              ' variable ID - '//TRIM(NF90_STRERROR( NF90_Status ))
-        CALL Write_Cleanup(); RETURN
-      END IF
-      NF90_Status = NF90_PUT_VAR( FileId,VarID,SpcCoeff%AllWavenumber )
-      IF ( NF90_Status /= NF90_NOERR ) THEN
-        msg = 'Error writing '//AllWAVENUMBER_VARNAME//' to '//TRIM(Filename)//&
-              ' - '//TRIM(NF90_STRERROR( NF90_Status ))
-        CALL Write_Cleanup(); RETURN
-      END IF
-      ! ...AllSolar_Irradiance variable
-      NF90_Status = NF90_INQ_VARID( FileId,AllSOLAR_IRRADIANCE_VARNAME,VarId )
-      IF ( NF90_Status /= NF90_NOERR ) THEN
-        msg = 'Error inquiring '//TRIM(Filename)//' for '//AllSOLAR_IRRADIANCE_VARNAME//&
-              ' variable ID - '//TRIM(NF90_STRERROR( NF90_Status ))
-        CALL Write_Cleanup(); RETURN
-      END IF
-      NF90_Status = NF90_PUT_VAR( FileId,VarID,SpcCoeff%AllSolar_Irradiance )
-      IF ( NF90_Status /= NF90_NOERR ) THEN
-        msg = 'Error writing '//AllSOLAR_IRRADIANCE_VARNAME//' to '//TRIM(Filename)//&
-              ' - '//TRIM(NF90_STRERROR( NF90_Status ))
-        CALL Write_Cleanup(); RETURN
-      END IF
-    ENDIF
 
 
     ! Close the file
@@ -954,7 +852,6 @@ CONTAINS
     INTEGER :: nf90_status
     INTEGER :: fileid
     INTEGER :: n_channels
-    INTEGER :: n_fovs
     INTEGER :: varid
 
 
@@ -974,8 +871,7 @@ CONTAINS
     ! Inquire the file to get the dimensions
     err_stat = SpcCoeff_netCDF_InquireFile( &
                  Filename, &
-                 n_Channels = n_channels, &
-                 n_fovs = n_fovs)
+                 n_Channels = n_channels  )
     IF ( err_stat /= SUCCESS ) THEN
       msg = 'Error obtaining SpcCoeff dimensions from '//TRIM(Filename)
       CALL Read_Cleanup(); RETURN
@@ -983,7 +879,7 @@ CONTAINS
 
 
     ! Allocate the output structure
-    CALL SpcCoeff_Create( SpcCoeff, n_channels, n_Fovs=n_Fovs )
+    CALL SpcCoeff_Create( SpcCoeff, n_channels )
     IF ( .NOT. SpcCoeff_Associated(SpcCoeff) ) THEN
       msg = 'Error allocating output SpcCoeff'
       CALL Read_Cleanup(); RETURN
@@ -1195,48 +1091,6 @@ CONTAINS
       msg = 'Error reading '//SOLAR_IRRADIANCE_VARNAME//' from '//TRIM(Filename)//&
             ' - '//TRIM(NF90_STRERROR( nf90_status ))
       CALL Read_Cleanup(); RETURN
-    END IF
-
-    IF ( n_Fovs > 1 )THEN
-      ! ...AllFrequency variable
-      nf90_status = NF90_INQ_VARID( fileid,AllFREQUENCY_VARNAME,varid )
-      IF ( nf90_status /= NF90_NOERR ) THEN
-        msg = 'Error inquiring '//TRIM(Filename)//' for '//AllFREQUENCY_VARNAME//&
-              ' variable ID - '//TRIM(NF90_STRERROR( nf90_status ))
-        CALL Read_Cleanup(); RETURN
-      END IF
-      nf90_status = NF90_GET_VAR( fileid,varid,SpcCoeff%AllFrequency )
-      IF ( nf90_status /= NF90_NOERR ) THEN
-        msg = 'Error reading '//FREQUENCY_VARNAME//' from '//TRIM(Filename)//&
-              ' - '//TRIM(NF90_STRERROR( nf90_status ))
-        CALL Read_Cleanup(); RETURN
-      END IF
-      ! ...AllWavenumber variable
-      nf90_status = NF90_INQ_VARID( fileid,AllWAVENUMBER_VARNAME,varid )
-      IF ( nf90_status /= NF90_NOERR ) THEN
-        msg = 'Error inquiring '//TRIM(Filename)//' for '//AllWAVENUMBER_VARNAME//&
-              ' variable ID - '//TRIM(NF90_STRERROR( nf90_status ))
-        CALL Read_Cleanup(); RETURN
-      END IF
-      nf90_status = NF90_GET_VAR( fileid,varid,SpcCoeff%AllWavenumber )
-      IF ( nf90_status /= NF90_NOERR ) THEN
-        msg = 'Error reading '//AllWAVENUMBER_VARNAME//' from '//TRIM(Filename)//&
-              ' - '//TRIM(NF90_STRERROR( nf90_status ))
-        CALL Read_Cleanup(); RETURN
-      END IF
-      ! ...AllSolar_Irradiance variable
-      nf90_status = NF90_INQ_VARID( fileid,AllSOLAR_IRRADIANCE_VARNAME,varid )
-      IF ( nf90_status /= NF90_NOERR ) THEN
-        msg = 'Error inquiring '//TRIM(Filename)//' for '//AllSOLAR_IRRADIANCE_VARNAME//&
-              ' variable ID - '//TRIM(NF90_STRERROR( nf90_status ))
-        CALL Read_Cleanup(); RETURN
-      END IF
-      nf90_status = NF90_GET_VAR( fileid,varid,SpcCoeff%AllSolar_Irradiance )
-      IF ( nf90_status /= NF90_NOERR ) THEN
-        msg = 'Error reading '//AllSOLAR_IRRADIANCE_VARNAME//' from '//TRIM(Filename)//&
-              ' - '//TRIM(NF90_STRERROR( nf90_status ))
-        CALL Read_Cleanup(); RETURN
-      END IF
     END IF
 
 
@@ -1585,7 +1439,6 @@ CONTAINS
     Filename        , &  ! Input
     n_Channels      , &  ! Input
     FileId          , &  ! Output
-    n_Fovs          , &  ! Optional input
     Version         , &  ! Optional input
     Sensor_Id       , &  ! Optional input
     WMO_Satellite_Id, &  ! Optional input
@@ -1598,7 +1451,6 @@ CONTAINS
     CHARACTER(*),           INTENT(IN)  :: Filename
     INTEGER     ,           INTENT(IN)  :: n_Channels
     INTEGER     ,           INTENT(OUT) :: FileId
-    INTEGER     , OPTIONAL, INTENT(IN)  :: n_Fovs         
     INTEGER     , OPTIONAL, INTENT(IN)  :: Version         
     CHARACTER(*), OPTIONAL, INTENT(IN)  :: Sensor_Id       
     INTEGER     , OPTIONAL, INTENT(IN)  :: WMO_Satellite_Id         
@@ -1615,7 +1467,6 @@ CONTAINS
     LOGICAL :: close_file
     INTEGER :: nf90_status
     INTEGER :: n_channels_dimid
-    INTEGER :: n_fovs_dimid
     INTEGER :: varid
     INTEGER :: put_status(4)
     
@@ -1641,19 +1492,6 @@ CONTAINS
       msg = 'Error defining '//CHANNEL_DIMNAME//' dimension in '//&
             TRIM(Filename)//' - '//TRIM(NF90_STRERROR( nf90_status ))
       CALL Create_Cleanup(); RETURN
-    END IF
-    ! Multiple FOVS
-    n_fovs_dimiD = -1
-    IF (PRESENT( n_Fovs) ) THEN
-       IF ( n_Fovs > 1 ) THEN
-         ! The number of fovs
-         nf90_status = NF90_DEF_DIM( FileID,FOV_DIMNAME,n_Fovs,n_Fovs_dimid )
-         IF ( nf90_status /= NF90_NOERR ) THEN
-           msg = 'Error defining '//FOV_DIMNAME//' dimension in '//&
-                 TRIM(Filename)//' - '//TRIM(NF90_STRERROR( nf90_status ))
-           CALL Create_Cleanup(); RETURN
-         END IF
-       END IF
     END IF
 
 
@@ -1922,66 +1760,6 @@ CONTAINS
       CALL Create_Cleanup(); RETURN
     END IF
 
-    ! Multiple FOVS
-    IF (n_fovs_dimiD >=0 ) THEN
-      ! ...AllFrequency variable
-      nf90_status = NF90_DEF_VAR( FileID, &
-                                  AllFREQUENCY_VARNAME, &
-                                  AllFREQUENCY_TYPE, &
-                                  dimIDs=(/n_channels_dimid, n_fovs_dimiD/), &
-                                  varID=variD )
-      IF ( nf90_status /= NF90_NOERR ) THEN
-        msg = 'Error defining '//AllFREQUENCY_VARNAME//' variable in '//&
-              TRIM(Filename)//' - '//TRIM(NF90_STRERROR( nf90_status ))
-        CALL Create_Cleanup(); RETURN
-      END IF
-      put_status(1) = NF90_PUT_ATT( FileID,varid,LONGNAME_ATTNAME   ,AllFREQUENCY_LONGNAME    )
-      put_status(2) = NF90_PUT_ATT( FileID,varid,DESCRIPTION_ATTNAME,AllFREQUENCY_DESCRIPTION )
-      put_status(3) = NF90_PUT_ATT( FileID,varid,UNITS_ATTNAME      ,AllFREQUENCY_UNITS       )
-      put_status(4) = NF90_PUT_ATT( FileID,varid,FILLVALUE_ATTNAME  ,AllFREQUENCY_FILLVALUE   )
-      IF ( ANY(put_status /= NF90_NOERR) ) THEN
-        msg = 'Error writing '//AllFREQUENCY_VARNAME//' variable attributes to '//TRIM(Filename)
-        CALL Create_Cleanup(); RETURN
-      END IF
-      ! ...AllWavenumber variable
-      nf90_status = NF90_DEF_VAR( FileID, &
-                                  AllWAVENUMBER_VARNAME, &
-                                  AllWAVENUMBER_TYPE, &
-                                  dimIDs=(/n_channels_dimid, n_fovs_dimiD/), &
-                                  varID=variD )
-      IF ( nf90_status /= NF90_NOERR ) THEN
-        msg = 'Error defining '//AllWAVENUMBER_VARNAME//' variable in '//&
-              TRIM(Filename)//' - '//TRIM(NF90_STRERROR( nf90_status ))
-        CALL Create_Cleanup(); RETURN
-      END IF
-      put_status(1) = NF90_PUT_ATT( FileID,varid,LONGNAME_ATTNAME   ,AllWAVENUMBER_LONGNAME    )
-      put_status(2) = NF90_PUT_ATT( FileID,varid,DESCRIPTION_ATTNAME,AllWAVENUMBER_DESCRIPTION )
-      put_status(3) = NF90_PUT_ATT( FileID,varid,UNITS_ATTNAME      ,AllWAVENUMBER_UNITS       )
-      put_status(4) = NF90_PUT_ATT( FileID,varid,FILLVALUE_ATTNAME  ,AllWAVENUMBER_FILLVALUE   )
-      IF ( ANY(put_status /= NF90_NOERR) ) THEN
-         msg = 'Error writing '//AllWAVENUMBER_VARNAME//' variable attributes to '//TRIM(Filename)
-         CALL Create_Cleanup(); RETURN
-      END IF
-      ! ...AllSolar_Irradiance variable
-      nf90_status = NF90_DEF_VAR( FileID, &
-                                  AllSOLAR_IRRADIANCE_VARNAME, &
-                                  AllSOLAR_IRRADIANCE_TYPE, &
-                                  dimIDs=(/n_channels_dimid, n_fovs_dimiD/), &
-                                  varID=variD )
-      IF ( nf90_status /= NF90_NOERR ) THEN
-        msg = 'Error defining '//AllSOLAR_IRRADIANCE_VARNAME//' variable in '//&
-              TRIM(Filename)//' - '//TRIM(NF90_STRERROR( nf90_status ))
-        CALL Create_Cleanup(); RETURN
-      END IF
-      put_status(1) = NF90_PUT_ATT( FileID,varid,LONGNAME_ATTNAME   ,AllSOLAR_IRRADIANCE_LONGNAME    )
-      put_status(2) = NF90_PUT_ATT( FileID,varid,DESCRIPTION_ATTNAME,AllSOLAR_IRRADIANCE_DESCRIPTION )
-      put_status(3) = NF90_PUT_ATT( FileID,varid,UNITS_ATTNAME      ,AllSOLAR_IRRADIANCE_UNITS       )
-      put_status(4) = NF90_PUT_ATT( FileID,varid,FILLVALUE_ATTNAME  ,AllSOLAR_IRRADIANCE_FILLVALUE   )
-      IF ( ANY(put_status /= NF90_NOERR) ) THEN
-        msg = 'Error writing '//AllSOLAR_IRRADIANCE_VARNAME//' variable attributes to '//TRIM(Filename)
-        CALL Create_Cleanup(); RETURN
-      END IF
-    END IF
 
     ! Take netCDF file out of define mode
     nf90_status = NF90_ENDDEF( FileId )

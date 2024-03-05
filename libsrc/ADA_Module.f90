@@ -141,7 +141,8 @@ CONTAINS
  
     total_opt(0) = ZERO
     DO k = 1, n_Layers
-      total_opt(k) = total_opt(k-1) + T_OD(k)
+      total_opt(k) = total_opt(k-1) + T_OD(k)/RTV%Layer_Cos_SolarZA(k)
+!      total_opt_s = total_opt_s + T_OD(k)/RTV%Layer_Cos_SolarZA(k)
     END DO
 
     nZ = RTV%n_Angles * RTV%n_Stokes
@@ -160,7 +161,9 @@ CONTAINS
     
     IF( RTV%Solar_Flag_true ) THEN
       RTV%s_Level_Rad_UP(1:nZ,n_Layers ) = RTV%s_Level_Rad_UP(1:nZ,n_Layers )+direct_reflectivity(1:nZ)* &
-        RTV%COS_SUN*RTV%Solar_irradiance/PI*exp(-total_opt(n_Layers)/RTV%COS_SUN)       
+         RTV%Layer_Cos_SolarZA(n_Layers)*RTV%Solar_irradiance/PI*exp(-total_opt(n_Layers))       
+
+! ori        RTV%COS_SUN*RTV%Solar_irradiance/PI*exp(-total_opt(n_Layers)/RTV%COS_SUN)     
     END IF
 
     ! UPWARD ADDING LOOP STARTS FROM BOTTOM LAYER TO ATMOSPHERIC TOP LAYER.
@@ -689,8 +692,11 @@ CONTAINS
      ! Solar source  
      Sfactor = single_albedo*RTV%Solar_irradiance/PI
      IF( RTV%mth_Azi == 0 ) Sfactor = Sfactor/TWO
-       EXPfactor = exp(-optical_depth/RTV%COS_SUN)
-       s_transmittance = exp(-total_opt/RTV%COS_SUN)
+       EXPfactor = exp(-optical_depth/RTV%Layer_Cos_SolarZA(KL))
+       s_transmittance = exp(-total_opt)
+
+!   ori    EXPfactor = exp(-optical_depth/RTV%COS_SUN)
+!       s_transmittance = exp(-total_opt/RTV%COS_SUN)
 
        DO i = 1, nZ     
          Solar(i) = -bb(i,nZ+1)*Sfactor
@@ -702,9 +708,14 @@ CONTAINS
            V0(i,j+nZ) = V0(i+nZ,j)
            V0(nZ+i,j+nZ) = V0(i,j)
          ENDDO
-         V0(i,i) = V0(i,i) - ONE - COS_Angle(i)/RTV%COS_SUN
-         V0(i+nZ,i+nZ) = V0(i+nZ,i+nZ) - ONE + COS_Angle(i)/RTV%COS_SUN
+         V0(i,i) = V0(i,i) - ONE - COS_Angle(i)/RTV%Layer_Cos_SolarZA(KL)
+         V0(i+nZ,i+nZ) = V0(i+nZ,i+nZ) - ONE + COS_Angle(i)/RTV%Layer_Cos_SolarZA(KL)
+
+!         V0(i,i) = V0(i,i) - ONE - COS_Angle(i)/RTV%COS_SUN
+!         V0(i+nZ,i+nZ) = V0(i+nZ,i+nZ) - ONE + COS_Angle(i)/RTV%COS_SUN
        ENDDO
+
+
 
        V1(1:N2_1,1:N2_1) = matinv(V0(1:N2_1,1:N2_1), Error_Status)
        IF( Error_Status /= SUCCESS  ) THEN

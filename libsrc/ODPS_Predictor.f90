@@ -1304,9 +1304,11 @@ CONTAINS
     REAL(fp) ::    GAzp_TL(SIZE(Absorber, DIM=1), SIZE(Absorber, DIM=2))
     REAL(fp) ::    GATzp_sum_TL(SIZE(Absorber, DIM=2))
     REAL(fp) ::    GATzp_TL(SIZE(Absorber, DIM=1), SIZE(Absorber, DIM=2))
-    TYPE(PAFV_type), POINTER  :: PAFV => NULL()
-
+!  qliu null, openMP seems not initiazing PAFV below for second and after processor
+!!    TYPE(PAFV_type), POINTER  :: PAFV => NULL()
+    TYPE(PAFV_type), POINTER  :: PAFV
     ! use short name
+     NULLIFY(PAFV)
     PAFV => Predictor%PAFV
 
     n_Layers = Predictor%n_Layers
@@ -1958,8 +1960,11 @@ CONTAINS
     REAL(fp) ::    GAzp_AD(SIZE(Absorber, DIM=1), SIZE(Absorber, DIM=2))
     REAL(fp) ::    GATzp_sum_AD(SIZE(Absorber, DIM=2))
     REAL(fp) ::    GATzp_AD(SIZE(Absorber, DIM=1), SIZE(Absorber, DIM=2))
-    TYPE(PAFV_type), POINTER  :: PAFV => NULL()
-
+!  qliu, openMP seems not initiazing PAFV below for second and after processor
+!!    TYPE(PAFV_type), POINTER  :: PAFV => NULL()
+    TYPE(PAFV_type), POINTER  :: PAFV
+    ! use short name
+     NULLIFY(PAFV)
     ! use short name
     PAFV => Predictor%PAFV
 
@@ -2854,7 +2859,6 @@ CONTAINS
                    - Predictor_AD%X(k, 6, COMP_WET_MW)*TWO*H2O_A/T2**3
 
         DT_AD    = DT_AD + Predictor_AD%X(k, 8, COMP_WET_MW)*H2O_A
-
         GAzp_AD(k,ABS_H2O_MW) = GAzp_AD(k,ABS_H2O_MW)                                           &
                    + Predictor_AD%X(k, 9, COMP_WET_MW)*TWO*SECANG(k)**2*PAFV%GAzp(k,ABS_H2O_MW) &
                    + Predictor_AD%X(k, 10,COMP_WET_MW)*SECANG(k)
@@ -3212,8 +3216,11 @@ CONTAINS
                  t2_TL,    s_t_TL, s_p_TL, Inverse_TL, d_Absorber_TL
      REAL(fp) :: Int_vapor_prev_TL, Int_vapor_TL, AveA_TL, ap1_TL
      INTEGER  :: i, k
-     TYPE(PAFV_type), POINTER  :: PAFV => NULL()
-
+!  qliu, openMP seems not initiazing PAFV below for second and after processor
+!!    TYPE(PAFV_type), POINTER  :: PAFV => NULL()
+    TYPE(PAFV_type), POINTER  :: PAFV
+    ! use short name
+     NULLIFY(PAFV)
      ! short name
      PAFV => Predictor%PAFV
 
@@ -3397,8 +3404,11 @@ CONTAINS
      REAL(fp) :: t2_AD, s_t_AD, s_p_AD, Inverse_AD, d_Absorber_AD
      REAL(fp) :: Int_vapor_prev_AD, Int_vapor_AD, AveA_AD, ap1_AD
      INTEGER  :: i, k
-     TYPE(PAFV_type), POINTER  :: PAFV => NULL()
-
+!  qliu, openMP seems not initiazing PAFV below for second and after processor
+!!    TYPE(PAFV_type), POINTER  :: PAFV => NULL()
+    TYPE(PAFV_type), POINTER  :: PAFV
+    ! use short name
+     NULLIFY(PAFV)
      ! short name
      PAFV => Predictor%PAFV
 

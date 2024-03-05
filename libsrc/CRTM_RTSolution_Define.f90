@@ -155,6 +155,8 @@ MODULE CRTM_RTSolution_Define
     REAL(fp) :: Brightness_Temperature = ZERO
     REAL(fp) :: Stokes(4) 
     REAL(fp) :: SolarIrradiance        = ZERO
+    REAL(fp), ALLOCATABLE :: Reflectivity(:)
+    REAL(fp), ALLOCATABLE :: Reflectivity_Attenuated(:)
   END TYPE CRTM_RTSolution_type
   !:tdoc-:
 
@@ -284,6 +286,8 @@ CONTAINS
               RTSolution%Upwelling_Overcast_Radiance(n_Layers), &
               RTSolution%Layer_Optical_Depth(n_Layers), &
               RTSolution%Single_Scatter_Albedo(n_Layers), & 
+              RTSolution%Reflectivity(n_Layers), & 
+              RTSolution%Reflectivity_Attenuated(n_Layers), & 
               STAT = alloc_stat )
     IF ( alloc_stat /= 0 ) RETURN
 
@@ -295,7 +299,8 @@ CONTAINS
     RTSolution%Upwelling_Overcast_Radiance  = ZERO
     RTSolution%Layer_Optical_Depth = ZERO
     RTSolution%Single_Scatter_Albedo = ZERO 
-
+    RTSolution%Reflectivity = ZERO 
+    RTSolution%Reflectivity_Attenuated = ZERO
     ! Set allocation indicator
     RTSolution%Is_Allocated = .TRUE.
 
@@ -349,13 +354,17 @@ CONTAINS
     RTSolution%Radiance                = ZERO
     RTSolution%Brightness_Temperature  = ZERO
     RTSolution%Stokes  = ZERO
-    
+    RTSolution%Radiance                = ZERO
+    RTSolution%Brightness_Temperature  = ZERO
+        
     ! Zero out the array data components
     IF ( CRTM_RTSolution_Associated(RTSolution) ) THEN
       RTSolution%Upwelling_Radiance  = ZERO
       RTSolution%Upwelling_Overcast_Radiance  = ZERO
       RTSolution%Layer_Optical_Depth = ZERO
       RTSolution%Single_Scatter_Albedo = ZERO  
+      RTSolution%Reflectivity = ZERO
+      RTSolution%Reflectivity_Attenuated = ZERO
     END IF
 
   END SUBROUTINE CRTM_RTSolution_Zero
@@ -1306,11 +1315,14 @@ CONTAINS
 
       rtssum%Layer_Optical_Depth(1:k) = rtssum%Layer_Optical_Depth(1:k) + &
                                           rts2%Layer_Optical_Depth(1:k)
+      rtssum%Reflectivity(1:k) = rtssum%Reflectivity(1:k) + &
+                                          rts2%Reflectivity(1:k)
+
+      rtssum%Reflectivity_Attenuated(1:k) = rtssum%Reflectivity_Attenuated(1:k) + &
+                                          rts2%Reflectivity_Attenuated(1:k)
     END IF
 
   END FUNCTION CRTM_RTSolution_Add
-
-
 !--------------------------------------------------------------------------------
 !
 ! NAME:
@@ -1387,6 +1399,12 @@ CONTAINS
 
       rtsdiff%Layer_Optical_Depth(1:k) = rtsdiff%Layer_Optical_Depth(1:k) - &
                                             rts2%Layer_Optical_Depth(1:k)
+
+      rtsdiff%Reflectivity(1:k) = rtsdiff%Reflectivity(1:k) - &
+                                            rts2%Reflectivity(1:k)      
+                                            
+      rtsdiff%Reflectivity_Attenuated(1:k) = rtsdiff%Reflectivity_Attenuated(1:k) - &
+                                            rts2%Reflectivity_Attenuated(1:k)  
     END IF
 
   END FUNCTION CRTM_RTSolution_Subtract
@@ -1460,6 +1478,8 @@ CONTAINS
       rts_power%Upwelling_Overcast_Radiance(1:k) = (rts_power%Upwelling_Overcast_Radiance(1:k))**power
       rts_power%Upwelling_Radiance(1:k)          = (rts_power%Upwelling_Radiance(1:k)         )**power
       rts_power%Layer_Optical_Depth(1:k)         = (rts_power%Layer_Optical_Depth(1:k)        )**power
+      rts_power%Reflectivity(1:k)                = (rts_power%Reflectivity(1:k)               )**power
+      rts_power%Reflectivity_Attenuated(1:k)       = (rts_power%Reflectivity_Attenuated(1:k)      )**power
     END IF
 
   END FUNCTION CRTM_RTSolution_Exponent
@@ -1534,6 +1554,8 @@ CONTAINS
       rts_normal%Upwelling_Overcast_Radiance(1:k) = rts_normal%Upwelling_Overcast_Radiance(1:k)/factor
       rts_normal%Upwelling_Radiance(1:k)          = rts_normal%Upwelling_Radiance(1:k)         /factor
       rts_normal%Layer_Optical_Depth(1:k)         = rts_normal%Layer_Optical_Depth(1:k)        /factor
+      rts_normal%Reflectivity(1:k)                = rts_normal%Reflectivity(1:k)               /factor
+      rts_normal%Reflectivity_Attenuated(1:k)     = rts_normal%Reflectivity_Attenuated(1:k)    /factor
     END IF
 
   END FUNCTION CRTM_RTSolution_Normalise
@@ -1600,6 +1622,8 @@ CONTAINS
       rts_sqrt%Upwelling_Overcast_Radiance(1:k) = SQRT(rts_sqrt%Upwelling_Overcast_Radiance(1:k))
       rts_sqrt%Upwelling_Radiance(1:k)          = SQRT(rts_sqrt%Upwelling_Radiance(1:k)         )
       rts_sqrt%Layer_Optical_Depth(1:k)         = SQRT(rts_sqrt%Layer_Optical_Depth(1:k)        )
+      rts_sqrt%Reflectivity(1:k)                = SQRT(rts_sqrt%Reflectivity(1:k)               )
+      rts_sqrt%Reflectivity_Attenuated(1:k)     = SQRT(rts_sqrt%Reflectivity_Attenuated(1:k)      )
     END IF
 
   END FUNCTION CRTM_RTSolution_Sqrt

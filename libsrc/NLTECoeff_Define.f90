@@ -48,7 +48,6 @@ MODULE NLTECoeff_Define
   PUBLIC :: NLTECoeff_Inspect
   PUBLIC :: NLTECoeff_ValidRelease
   PUBLIC :: NLTECoeff_Info
-  PUBLIC :: NLTECoeff_DefineVersion
   PUBLIC :: NLTECoeff_Subset
   PUBLIC :: NLTECoeff_Concat
   PUBLIC :: NLTECoeff_ChannelReindex
@@ -65,9 +64,6 @@ MODULE NLTECoeff_Define
   ! -----------------
   ! Module parameters
   ! -----------------
-  ! Version Id for the module
-  CHARACTER(*), PARAMETER :: MODULE_VERSION_ID = &
-  '$Id: NLTECoeff_Define.f90 14334 2011-06-21 13:43:46Z paul.vandelst@noaa.gov $'
   ! Literal constants
   REAL(Double), PARAMETER :: ZERO = 0.0_Double
   REAL(Double), PARAMETER :: ONE  = 1.0_Double
@@ -545,35 +541,6 @@ CONTAINS
   END SUBROUTINE NLTECoeff_Info
  
  
-!--------------------------------------------------------------------------------
-!:sdoc+:
-!
-! NAME:
-!       NLTECoeff_DefineVersion
-!
-! PURPOSE:
-!       Subroutine to return the module version information.
-!
-! CALLING SEQUENCE:
-!       CALL NLTECoeff_DefineVersion( Id )
-!
-! OUTPUTS:
-!       Id:    Character string containing the version Id information
-!              for the module.
-!              UNITS:      N/A
-!              TYPE:       CHARACTER(*)
-!              DIMENSION:  Scalar
-!              ATTRIBUTES: INTENT(OUT)
-!
-!:sdoc-:
-!--------------------------------------------------------------------------------
-
-  SUBROUTINE NLTECoeff_DefineVersion( Id )
-    CHARACTER(*), INTENT(OUT) :: Id
-    Id = MODULE_VERSION_ID
-  END SUBROUTINE NLTECoeff_DefineVersion
-
-
 !--------------------------------------------------------------------------------
 !:sdoc+:
 !
