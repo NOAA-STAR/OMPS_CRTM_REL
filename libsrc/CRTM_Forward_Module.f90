@@ -250,7 +250,7 @@ CONTAINS
     ! Local variables
     CHARACTER(256) :: Message
     LOGICAL :: Options_Present
-    INTEGER :: n_Sensors, i, H2O_idx
+    INTEGER :: n_Sensors, i, k, H2O_idx
     INTEGER :: n_Channels
     INTEGER :: m, n_Profiles, nc
     ! Local ancillary input structure
@@ -275,10 +275,31 @@ CONTAINS
 !    REAL(fp) :: Height(0:MAX_N_LAYERS)
     REAL(fp), Allocatable :: Height(:,:)
     REAL(fp), PARAMETER :: Earth_Radius = 6370.0_fp
+    REAL(fp) :: trans(0:100,158), OPT_DEPTH(100,158), b11
     ! ------
     ! SET UP
     ! ------
     Error_Status = SUCCESS
+
+    CLOSE(70)
+    OPEN(70,file='../N21_NP_TauProf/trans.txt')
+    trans(0,:) = ONE
+     DO k = 1, 100
+       READ(70,'(6E15.8)') trans(k,:)
+       DO i = 1, 158
+         b11 = trans(k-1,i)/trans(k,i)
+         b11 = log(b11)
+         IF( b11 > 1.E-9) THEN
+           OPT_DEPTH(k,i) = b11
+         ELSE
+           OPT_DEPTH(k,i) = 0.0005_fp
+         END IF
+       END DO
+     END DO
+     
+     write(6,'(8f11.7)') OPT_DEPTH(:,20)
+    CLOSE(70) 
+!    IF( k > 0) STOP
     IF (enable_timing) THEN
       CALL SYSTEM_CLOCK (count_rate=count_rate)
       CALL SYSTEM_CLOCK (count=count_start)
@@ -343,8 +364,7 @@ CONTAINS
 !    IF ( n_omp_threads <= n_Profiles ) THEN
 
 !!  parallel for profile loop only now
-    IF ( n_omp_threads > n_Profiles ) n_omp_threads = n_Profiles
-    IF ( n_Profiles == 1) n_omp_threads = 1
+!!    IF ( n_omp_threads > n_Profiles ) n_omp_threads = n_Profiles
     IF ( n_omp_threads <= n_Profiles ) THEN    
       n_profile_threads = n_omp_threads
       n_channel_threads = 1
@@ -934,6 +954,10 @@ CONTAINS
                                              Predictor , &  ! Input
                                              AtmOptics(nt) , &  ! Output
                                              AAvar(nt)       )  ! Internal variable output
+
+!  liu
+          AtmOptics(nt)%Optical_Depth(:) = OPT_DEPTH(1:Atmosphere(m)%n_layers,ln)
+
 
             ! Compute the molecular scattering properties
             ! ...Solar radiation
