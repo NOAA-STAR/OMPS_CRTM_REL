@@ -154,6 +154,9 @@ CONTAINS
     ! Loop over atmospheric layers
     DO k = 1, Atmosphere%n_Layers
       Optical_Depth = RFACTOR*Opt_unit*(Atmosphere%Level_Pressure(k)-Atmosphere%Level_Pressure(k-1))
+
+!   Optical_Depth = Optical_Depth/2.0
+
       AtmOptics%Optical_Depth(k)         = AtmOptics%Optical_Depth(k)         + Optical_Depth 
       AtmOptics%Single_Scatter_Albedo(k) = AtmOptics%Single_Scatter_Albedo(k) + Optical_Depth 
 
