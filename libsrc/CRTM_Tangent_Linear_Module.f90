@@ -940,6 +940,7 @@ CONTAINS
 
             ! Channel setup
             ! ...Skip channel if requested
+            IF ( l > n_sensor_channels ) CYCLE Channel_Loop
             IF ( .NOT. ChannelInfo(n)%Process_Channel(l) ) CYCLE Channel_Loop
             ! ...Shorter name
             ChannelIndex = ChannelInfo(n)%Channel_Index(l)

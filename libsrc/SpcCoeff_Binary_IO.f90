@@ -366,6 +366,7 @@ CONTAINS
       WRITE( msg,'("Error reading Release/Version. IOSTAT = ",i0)' ) io_stat
       CALL Read_Cleanup(); RETURN
     END IF
+
     IF ( .NOT. SpcCoeff_ValidRelease( dummy ) ) THEN
       msg = 'SpcCoeff Release check failed.'
       CALL Read_Cleanup(); RETURN
@@ -524,6 +525,7 @@ CONTAINS
     
     ! Close the file
     CLOSE( fid,IOSTAT=io_stat )
+
     IF ( io_stat /= 0 ) THEN
       WRITE( msg,'("Error closing ",a,". IOSTAT = ",i0)' ) TRIM(Filename), io_stat
       CALL Read_Cleanup(); RETURN
@@ -548,6 +550,8 @@ CONTAINS
        err_stat = FAILURE
        CALL Display_Message( ROUTINE_NAME, msg, err_stat )
      END SUBROUTINE Read_CleanUp
+
+
 
   END FUNCTION SpcCoeff_Binary_ReadFile
 

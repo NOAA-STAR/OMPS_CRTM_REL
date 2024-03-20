@@ -49,8 +49,7 @@ MODULE ODPS_netCDF_IO
   ! -----------------
   ! Module parameters
   ! -----------------
-  CHARACTER(*), PARAMETER :: MODULE_RCS_ID = &
-    '$Id: ODPS_netCDF_IO.f90 5277 2009-10-19 18:05:00Z yong.chen@noaa.gov $'
+  CHARACTER(*), PARAMETER :: MODULE_RCS_ID = 'Placeholder'
   ! Literal constants
   REAL(Double), PARAMETER :: ZERO = 0.0_Double
   REAL(Double), PARAMETER :: ONE  = 1.0_Double
@@ -81,7 +80,6 @@ MODULE ODPS_netCDF_IO
   CHARACTER(*), PARAMETER :: COEFF_DIMNAME             = 'n_Coeffs'
   CHARACTER(*), PARAMETER :: ODASPRED_DIMNAME          = 'n_OPIndex'
   CHARACTER(*), PARAMETER :: ODASCOEFF_DIMNAME         = 'n_OCoeffs'
-  CHARACTER(*), PARAMETER :: FOV_DIMNAME               = 'n_Fovs'
 
   ! Variable names. Case sensitive.
   CHARACTER(*), PARAMETER :: GROUP_INDEX_VARNAME       = 'Group_Index'
@@ -107,9 +105,6 @@ MODULE ODPS_netCDF_IO
   CHARACTER(*), PARAMETER :: ALPHA_C1_VARNAME          = 'Alpha_C1'
   CHARACTER(*), PARAMETER :: ALPHA_C2_VARNAME          = 'Alpha_C2'
   CHARACTER(*), PARAMETER :: OCOMPONENT_INDEX_VARNAME  = 'OComponent_Index'
-  CHARACTER(*), PARAMETER :: AllN_PREDICTORS_VARNAME      = 'All_n_Predictors'
-  CHARACTER(*), PARAMETER :: AllPOS_INDEX_VARNAME         = 'All_Pos_Index'
-  CHARACTER(*), PARAMETER :: AllODPS_COEFFICIENTS_VARNAME = 'All_ODPS_Coefficients'
 
   ! Description attribute.
   CHARACTER(*), PARAMETER :: DESCRIPTION_ATTNAME = 'description'
@@ -137,9 +132,6 @@ MODULE ODPS_netCDF_IO
   CHARACTER(*), PARAMETER :: ALPHA_C1_DESCRIPTION          = 'First constant (slope) for Alpha to absorber space'
   CHARACTER(*), PARAMETER :: ALPHA_C2_DESCRIPTION          = 'Second constant (offset) for Alpha to absorber space'
   CHARACTER(*), PARAMETER :: OComponent_Index_DESCRIPTION  = 'OComponent Index for water line absorption'
-  CHARACTER(*), PARAMETER :: AllN_PREDICTORS_DESCRIPTION      = 'List of the number of predictors for all FOVS'
-  CHARACTER(*), PARAMETER :: AllPOS_INDEX_DESCRIPTION         = 'List of the starting position for all FOVS'
-  CHARACTER(*), PARAMETER :: AllODPS_COEFFICIENTS_DESCRIPTION = 'Regression model ODPS gas absorption coefficients for all FOVS'
 
   ! Long name attribute.
   CHARACTER(*), PARAMETER :: LONGNAME_ATTNAME = 'long_name'
@@ -167,9 +159,6 @@ MODULE ODPS_netCDF_IO
   CHARACTER(*), PARAMETER :: ALPHA_C1_LONGNAME          = 'Alpha Slope'
   CHARACTER(*), PARAMETER :: ALPHA_C2_LONGNAME          = 'Alpha Offset'
   CHARACTER(*), PARAMETER :: OComponent_Index_LONGNAME  = 'ODAS Component Index'
-  CHARACTER(*), PARAMETER :: AllN_PREDICTORS_LONGNAME      = 'All number of Predictors'
-  CHARACTER(*), PARAMETER :: AllPOS_INDEX_LONGNAME         = 'All Position Index'
-  CHARACTER(*), PARAMETER :: AllODPS_COEFFICIENTS_LONGNAME = 'All ODPS Coefficients'
 
   ! Variable units attribute.
   CHARACTER(*), PARAMETER :: UNITS_ATTNAME = 'units'
@@ -197,9 +186,6 @@ MODULE ODPS_netCDF_IO
   CHARACTER(*), PARAMETER :: ALPHA_C1_UNITS          = 'Absorber dependent'
   CHARACTER(*), PARAMETER :: ALPHA_C2_UNITS          = 'Absorber dependent'
   CHARACTER(*), PARAMETER :: OComponent_Index_UNITS  = 'N/A'
-  CHARACTER(*), PARAMETER :: AllN_PREDICTORS_UNITS      = 'N/A'
-  CHARACTER(*), PARAMETER :: AllPOS_INDEX_UNITS         = 'N/A'
-  CHARACTER(*), PARAMETER :: AllODPS_COEFFICIENTS_UNITS = 'Absorber and predictor dependent'
   
   ! Variable _FillValue attribute.
   CHARACTER(*), PARAMETER :: FILLVALUE_ATTNAME = '_FillValue'
@@ -227,9 +213,6 @@ MODULE ODPS_netCDF_IO
   REAL(fp)     , PARAMETER :: ALPHA_C1_FILLVALUE          = ZERO
   REAL(fp)     , PARAMETER :: ALPHA_C2_FILLVALUE          = ZERO
   INTEGER(Long), PARAMETER :: OComponent_Index_FILLVALUE  = 0
-  INTEGER(Long), PARAMETER :: AllN_PREDICTORS_FILLVALUE      = 0
-  INTEGER(Long), PARAMETER :: AllPOS_INDEX_FILLVALUE         = 0
-  REAL(Single) , PARAMETER :: AllODPS_COEFFICIENTS_FILLVALUE = 0_Single
 
   ! Variable netCDF datatypes
   INTEGER, PARAMETER :: GROUP_INDEX_TYPE       = NF90_INT
@@ -255,9 +238,6 @@ MODULE ODPS_netCDF_IO
   INTEGER, PARAMETER :: ALPHA_C1_TYPE          = NF90_DOUBLE            
   INTEGER, PARAMETER :: ALPHA_C2_TYPE          = NF90_DOUBLE
   INTEGER, PARAMETER :: OComponent_Index_TYPE  = NF90_INT
-  INTEGER, PARAMETER :: AllN_PREDICTORS_TYPE      = NF90_INT
-  INTEGER, PARAMETER :: AllPOS_INDEX_TYPE         = NF90_INT
-  INTEGER, PARAMETER :: AllODPS_COEFFICIENTS_TYPE = NF90_FLOAT
 
 CONTAINS
 !################################################################################
@@ -286,7 +266,6 @@ CONTAINS
 !                                           n_Coeffs         = n_Coeffs        , &  ! Optional output
 !                                           n_OPIndex        = n_OPIndex       , &  ! Optional output
 !                                           n_OCoeffs        = n_OCoeffs       , &  ! Optional output
-!                                           n_Fovs           = n_Fovs          , &  ! Optional output
 !                                           Release          = Release         , &  ! Optional Output
 !                                           Version          = Version         , &  ! Optional Output
 !                                           Sensor_Id        = Sensor_Id       , &  ! Optional output
@@ -360,12 +339,6 @@ CONTAINS
 !                           ATTRIBUTES: INTENT(OUT), OPTIONAL
 !
 !       n_OCoeffs:          The number of Coefficients dimension of the ODAS data.  
-!                           UNITS:      N/A
-!                           TYPE:       INTEGER
-!                           DIMENSION:  Scalar
-!                           ATTRIBUTES: INTENT(OUT), OPTIONAL
-!
-!       n_Fovs:             The number of Fov dimension.
 !                           UNITS:      N/A
 !                           TYPE:       INTEGER
 !                           DIMENSION:  Scalar
@@ -464,7 +437,6 @@ CONTAINS
                                 n_Coeffs        , &  ! Optional output
                                 n_OPIndex       , &  ! Optional output
                                 n_OCoeffs       , &  ! Optional output 
-                                n_Fovs          , &  ! Optional output
                                 Release         , &  ! Optional Output
                                 Version         , &  ! Optional Output
                                 Sensor_Id       , &  ! Optional output
@@ -486,7 +458,6 @@ CONTAINS
     INTEGER     , OPTIONAL, INTENT(OUT) :: n_Coeffs         
     INTEGER     , OPTIONAL, INTENT(OUT) :: n_OPIndex        
     INTEGER     , OPTIONAL, INTENT(OUT) :: n_OCoeffs        
-    INTEGER     , OPTIONAL, INTENT(OUT) :: n_Fovs
     INTEGER     , OPTIONAL, INTENT(OUT) :: Release          
     INTEGER     , OPTIONAL, INTENT(OUT) :: Version          
     CHARACTER(*), OPTIONAL, INTENT(OUT) :: Sensor_Id        
@@ -511,7 +482,6 @@ CONTAINS
     INTEGER :: n_File_OPIndex
     INTEGER :: n_File_OCoeffs
     INTEGER :: n_File_n_Coeffs    
-    INTEGER :: n_File_Fovs
     
     TYPE(ODPS_type) :: ODPS  
 
@@ -588,23 +558,10 @@ CONTAINS
      END IF
     END IF
 
-    ! The number of  n_Fovs
-    n_File_Fovs = 0
-    IF ( n_Dims >= 7 ) THEN
-     Error_Status = Get_netCDF_Dimension( NC_FileID, &
-                                          FOV_DIMNAME, &
-                                          n_File_Fovs, &
-                                          Message_Log=Message_Log )
-     IF ( Error_Status /= SUCCESS ) THEN
-       Message = 'Error obtaining '//FOV_DIMNAME//' dimension from '//TRIM(NC_Filename)
-       CALL Inquire_Cleanup(Close_File=SET)
-     END IF
-    END IF
-
     ! The number of n_OPindex.
     n_File_OPIndex = 0
     n_File_OCoeffs = 0
-    IF (( n_Dims > 7 ) .OR. ((n_Dims > 6) .AND. (n_File_Fovs == 0))) THEN
+    IF ( n_Dims > 6 ) THEN
     
      Error_Status = Get_netCDF_Dimension( NC_FileID, &
                                           ODASPRED_DIMNAME, &
@@ -663,7 +620,6 @@ CONTAINS
     IF ( PRESENT(n_Coeffs     ) )  n_Coeffs      = n_File_n_Coeffs
     IF ( PRESENT(n_OPIndex    ) )  n_OPIndex     = n_File_OPIndex-1 
     IF ( PRESENT(n_OCoeffs    ) )  n_OCoeffs     = n_File_OCoeffs
-    IF ( PRESENT(n_Fovs       ) )  n_Fovs        = n_File_Fovs
      
     ! Release/Version information
     IF ( PRESENT(Release) ) Release = ODPS%Release
@@ -866,7 +822,6 @@ CONTAINS
                                ODPS%n_OPIndex                        , &  ! Input
                                ODPS%n_OCoeffs                        , &  ! Input
                                NC_FileID                             , &  ! Output
-                               n_fovs          =ODPS%nFOVs           , &  ! Optional Input
                                Version         =ODPS%Version         , &  ! Optional input
                                Sensor_Id       =ODPS%Sensor_Id       , &  ! Optional input
                                WMO_Satellite_Id=ODPS%WMO_Satellite_Id, &  ! Optional input
@@ -1094,7 +1049,6 @@ CONTAINS
     INTEGER :: n_Coeffs     
     INTEGER :: n_OPIndex    
     INTEGER :: n_OCoeffs    
-    INTEGER :: n_Fovs
 
     ! Set up
     ! ------
@@ -1119,7 +1073,6 @@ CONTAINS
                                         n_Coeffs       = n_Coeffs      , &
                                         n_OPIndex      = n_OPIndex     , &
                                         n_OCoeffs      = n_OCoeffs     , &
-                                        n_Fovs         = n_Fovs        , &
                                         Release        = ODPS%Release  , &
                                         Version        = ODPS%Version  , &
                                         Title          = Title         , &
@@ -1139,7 +1092,6 @@ CONTAINS
                                   n_Channels  , &
                                   n_Coeffs    , &
                                   ODPS        , &
-                                  n_Fovs=n_Fovs, &
                                   Message_Log=Message_Log )
     IF ( Error_Status /= SUCCESS ) THEN
       Message = 'Error occurred allocating ODPS structure.'
@@ -1158,7 +1110,6 @@ CONTAINS
     END IF
 
     ! Open the netCDF file for reading
-
     ! --------------------------------
     Error_Status = Open_netCDF( NC_Filename, &
                                 NC_FileID, &
@@ -1285,7 +1236,6 @@ CONTAINS
 !                                  n_OPIndex                        , &  ! Input
 !                                  n_OCoeffs                        , &  ! Input
 !                                  NC_FileID                        , &  ! Output
-!                                  n_Fovs          =n_Fovs          , &  ! Optional Input
 !                                  Version         =Version         , &  ! Optional input
 !                                  Sensor_Id       =Sensor_Id       , &  ! Optional input
 !                                  WMO_Satellite_Id=WMO_Satellite_Id, &  ! Optional input
@@ -1360,12 +1310,6 @@ CONTAINS
 !                           ATTRIBUTES: INTENT(OUT)
 !
 ! OPTIONAL INPUT ARGUMENTS:
-!       n_Fovs:             The number of Coefficients dimension of the FOVS.
-!                           UNITS:      N/A
-!                           TYPE:       INTEGER
-!                           DIMENSION:  Scalar
-!                           ATTRIBUTES: INTENT(IN), OPTIONAL
-!
 !       Version:            The version number of the netCDF ODAS file.
 !                           UNITS:      N/A
 !                           TYPE:       INTEGER
@@ -1460,7 +1404,6 @@ CONTAINS
                        n_OPIndex       , &  ! Input
                        n_OCoeffs       , &  ! Input
                        NC_FileID       , &  ! Output
-                       n_Fovs          , &  ! Optional Input
                        Version         , &  ! Optional input
                        Sensor_Id       , &  ! Optional input
                        WMO_Satellite_Id, &  ! Optional input
@@ -1481,7 +1424,6 @@ CONTAINS
     INTEGER               , INTENT(IN)  :: n_OPIndex       
     INTEGER               , INTENT(IN)  :: n_OCoeffs       
     INTEGER               , INTENT(OUT) :: NC_FileID       
-    INTEGER     , OPTIONAL, INTENT(IN)  :: n_Fovs
     INTEGER     , OPTIONAL, INTENT(IN)  :: Version         
     CHARACTER(*), OPTIONAL, INTENT(IN)  :: Sensor_Id       
     INTEGER     , OPTIONAL, INTENT(IN)  :: WMO_Satellite_Id
@@ -1506,7 +1448,6 @@ CONTAINS
     INTEGER :: n_Absorbers_DimID 
     INTEGER :: n_Channels_DimID  
     INTEGER :: n_Coeffs_DimID    
-    INTEGER :: n_Fovs_DimID
     INTEGER :: n_OPIndex_DimID
     INTEGER :: n_OCoeffs_DimID 
  
@@ -1581,33 +1522,6 @@ CONTAINS
       CALL Create_Cleanup(); RETURN
     END IF
 
-    ! Define the ODPS coefficients dimension
-    IF (n_Coeffs > 0) THEN
-
-    ! The number of coeffs
-      Define_Status = DefineDim( NC_Filename, NC_FileID, &
-                                 COEFF_DIMNAME, n_Coeffs, n_Coeffs_DimID, &
-                                 Message_Log=Message_Log )
-      IF ( Define_Status /= SUCCESS ) THEN
-        CALL Create_Cleanup(); RETURN
-      END IF
-
-    END IF
-
-    ! Multiple FOVS
-    n_Fovs_DimID = -1
-    IF (PRESENT( n_Fovs) ) THEN
-      IF ( n_Fovs > 1 ) THEN
-        ! The number of fovs
-        Define_Status = DefineDim( NC_Filename, NC_FileID, &
-                                   FOV_DIMNAME, n_Fovs, n_Fovs_DimID, &
-                                   Message_Log=Message_Log )
-        IF ( Define_Status /= SUCCESS ) THEN
-          CALL Create_Cleanup(); RETURN
-       END IF
-      END IF
-    END IF
-
     ! Write the global attributes
     ! ---------------------------
     Write_Status = WriteGAtts( NC_Filename                      , &  ! Input
@@ -1640,20 +1554,25 @@ CONTAINS
                                n_Components_DimID     , &  ! Input
                                n_Absorbers_DimID      , &  ! Input
                                n_Channels_DimID       , &  ! Input
-                               n_Fovs_DimID=n_Fovs_DimID   , &  ! Input
                                Message_Log=Message_Log  )  ! Error messaging
     IF ( Define_Status /= SUCCESS ) THEN
       Message = 'Error defining variables in '//TRIM(NC_Filename)
       CALL Create_Cleanup(); RETURN
     END IF
 
-    ! Define the ODPS coefficients variables
+    ! Define the ODPS coefficients dimension and variables
     IF (n_Coeffs > 0) THEN
     
+    ! The number of coeffs
+      Define_Status = DefineDim( NC_Filename, NC_FileID, &
+                                 COEFF_DIMNAME, n_Coeffs, n_Coeffs_DimID, &
+                                 Message_Log=Message_Log )
+      IF ( Define_Status /= SUCCESS ) THEN 
+        CALL Create_Cleanup(); RETURN
+      END IF
       Define_Status = DefineVar_Coeff(NC_Filename            , &  ! Input
                                       NC_FileID              , &  ! Input
-                                      n_Coeffs_DimID         , &  ! Input
-                                      n_Fovs_DimID = n_Fovs_DimID , &  ! Input
+                                      n_Coeffs_DimID        , &  ! Input
                                       Message_Log=Message_Log  )  ! Error messaging
 
       IF ( Define_Status /= SUCCESS ) THEN
@@ -2479,7 +2398,6 @@ CONTAINS
 !                                 n_Components_DimID     , &  ! Input
 !                                 n_Absorbers_DimID      , &  ! Input
 !                                 n_Channels_DimID       , &  ! Input
-!                                 n_Fovs_DimID= n_Fovs_DimID  , &  ! Optional Input
 !                                 Message_Log=Message_Log  )  ! Error messaging
 !
 ! INPUT ARGUMENTS
@@ -2529,15 +2447,7 @@ CONTAINS
 !                           DIMENSION:  Scalar
 !                           ATTRIBUTES: INTENT(IN)
 !
-!
 ! OPTIONAL INPUT ARGUMENTS
-!       n_Fovs_DimID:       NetCDF dimension ID of the number of Fovs
-!                           channels (n_Channels).
-!                           UNITS:      N/A
-!                           TYPE:       INTEGER
-!                           DIMENSION:  Scalar
-!                           ATTRIBUTES: INTENT(IN), OPTIONAL
-!
 !       Message_Log:        Character string specifying a filename in which any
 !                           messages will be logged. If not specified, or if an
 !                           error occurs opening the log file, the default action
@@ -2556,7 +2466,6 @@ CONTAINS
                       n_Components_DimID, &  ! Input
                       n_Absorbers_DimID , &  ! Input
                       n_Channels_DimID  , &  ! Input
-                      n_Fovs_DimID      , &  ! Optional Input
                       Message_Log       ) &  ! Error messaging
                     RESULT( Error_Status )
     ! Arguments
@@ -2567,7 +2476,6 @@ CONTAINS
     INTEGER     ,           INTENT(IN)  :: n_Components_DimID
     INTEGER     ,           INTENT(IN)  :: n_Absorbers_DimID 
     INTEGER     ,           INTENT(IN)  :: n_Channels_DimID  
-    INTEGER     , OPTIONAL, INTENT(IN)  :: n_Fovs_DimID
     CHARACTER(*), OPTIONAL, INTENT(IN)  :: Message_Log
     ! Function result
     INTEGER :: Error_Status
@@ -3031,84 +2939,9 @@ CONTAINS
                                   FILLVALUE_ATTNAME, &
                                   POS_INDEX_FILLVALUE )
     IF ( ANY(Put_Status /= SUCCESS) ) THEN
-      Message = 'Error writing '//POS_INDEX_VARNAME//&
+      Message = 'Error writing '//N_PREDICTORS_VARNAME//&
                 ' variable attributes to '//TRIM(NC_Filename)
       CALL DefineVar_Cleanup(); RETURN
-    END IF
-
-    ! Multiple FOVS
-    IF ( PRESENT(n_Fovs_DimID) ) THEN
-       IF (n_Fovs_DimID >= 0) THEN
-          ! Define the Alln_Predictors
-          ! ----------------------
-          NF90_Status = NF90_DEF_VAR( NC_FileID, &
-                                AllN_PREDICTORS_VARNAME, &
-                                AllN_PREDICTORS_TYPE, &
-                                dimIDs=(/n_Components_DimID, n_Channels_DimID, n_Fovs_DimID/), &
-                                varID =VarID )
-          IF ( NF90_Status /= NF90_NOERR ) THEN
-             Message = 'Error defining '//AllN_PREDICTORS_VARNAME//' variable in '//&
-                  TRIM(NC_Filename)//' - '//TRIM(NF90_STRERROR( NF90_Status ))
-             CALL DefineVar_Cleanup(); RETURN
-          END IF
-
-          Put_Status(1) = NF90_PUT_ATT( NC_FileID, &
-                                        VarID, &
-                                        LONGNAME_ATTNAME, &
-                                        AllN_PREDICTORS_LONGNAME )
-          Put_Status(2) = NF90_PUT_ATT( NC_FileID, &
-                                        VarID, &
-                                        DESCRIPTION_ATTNAME, &
-                                        AllN_PREDICTORS_DESCRIPTION )
-          Put_Status(3) = NF90_PUT_ATT( NC_FileID, &
-                                        VarID, &
-                                        UNITS_ATTNAME, &
-                                        AllN_PREDICTORS_UNITS )
-          Put_Status(4) = NF90_PUT_ATT( NC_FileID, &
-                                        VarID, &
-                                        FILLVALUE_ATTNAME, &
-                                        AllN_PREDICTORS_FILLVALUE )
-          IF ( ANY(Put_Status /= SUCCESS) ) THEN
-             Message = 'Error writing '//AllN_PREDICTORS_VARNAME//&
-                  ' variable attributes to '//TRIM(NC_Filename)
-             CALL DefineVar_Cleanup(); RETURN
-          END IF
-
-          ! Define the AllPos_Index
-          ! ----------------------
-          NF90_Status = NF90_DEF_VAR( NC_FileID, &
-                                      AllPOS_INDEX_VARNAME, &
-                                      AllPOS_INDEX_TYPE, &
-                                      dimIDs=(/n_Components_DimID, n_Channels_DimID, n_Fovs_DimId/), &
-                                      varID =VarID )
-          IF ( NF90_Status /= NF90_NOERR ) THEN
-             Message = 'Error defining '//AllPOS_INDEX_VARNAME//' variable in '//&
-                  TRIM(NC_Filename)//' - '//TRIM(NF90_STRERROR( NF90_Status ))
-             CALL DefineVar_Cleanup(); RETURN
-          END IF
-
-          Put_Status(1) = NF90_PUT_ATT( NC_FileID, &
-                                        VarID, &
-                                        LONGNAME_ATTNAME, &
-                                        AllPOS_INDEX_LONGNAME )
-          Put_Status(2) = NF90_PUT_ATT( NC_FileID, &
-                                        VarID, &
-                                        DESCRIPTION_ATTNAME, &
-                                        AllPOS_INDEX_DESCRIPTION )
-          Put_Status(3) = NF90_PUT_ATT( NC_FileID, &
-                                        VarID, &
-                                        UNITS_ATTNAME, &
-                                        AllPOS_INDEX_UNITS )
-          Put_Status(4) = NF90_PUT_ATT( NC_FileID, &
-                                        VarID, &
-                                        FILLVALUE_ATTNAME, &
-                                        AllPOS_INDEX_FILLVALUE )
-          IF ( ANY(Put_Status /= SUCCESS) ) THEN
-             Message = 'Error writing '//AllPOS_INDEX_VARNAME//&
-                  ' variable attributes to '//TRIM(NC_Filename)
-             CALL DefineVar_Cleanup(); RETURN
-          END IF
-       END IF
     END IF
 
   CONTAINS
@@ -3142,7 +2975,6 @@ CONTAINS
 !       Error_Status = DefineVar_Coeff(NC_Filename            , &  ! Input
 !                                      NC_FileID              , &  ! Input
 !                                      n_Coeffs_DimID         , &  ! Input
-!                                      n_Fovs_DimID= n_Fovs_DimID  , &  ! Optional Input
 !                                      Message_Log=Message_Log  )  ! Error messaging
 !
 ! INPUT ARGUMENTS
@@ -3168,14 +3000,6 @@ CONTAINS
 !
 !
 ! OPTIONAL INPUT ARGUMENTS
-!
-!       n_Fovs_DimID:       NetCDF dimension ID of the number of Fovs
-!                           channels (n_Channels).
-!                           UNITS:      N/A
-!                           TYPE:       INTEGER
-!                           DIMENSION:  Scalar
-!                           ATTRIBUTES: INTENT(IN), OPTIONAL
-!
 !       Message_Log:        Character string specifying a filename in which any
 !                           messages will be logged. If not specified, or if an
 !                           error occurs opening the log file, the default action
@@ -3190,14 +3014,12 @@ CONTAINS
   FUNCTION DefineVar_Coeff(NC_Filename       , &  ! Input
                            NC_FileID         , &  ! Input
                            n_Coeffs_DimID    , &  ! Input
-                           n_Fovs_DimID      , &  ! Optional Input
                            Message_Log       ) &  ! Error messaging
                     RESULT( Error_Status )
     ! Arguments
     CHARACTER(*),           INTENT(IN)  :: NC_Filename
     INTEGER     ,           INTENT(IN)  :: NC_FileID
     INTEGER     ,           INTENT(IN)  :: n_Coeffs_DimID    
-    INTEGER     , OPTIONAL, INTENT(IN)  :: n_Fovs_DimID
     CHARACTER(*), OPTIONAL, INTENT(IN)  :: Message_Log
     ! Function result
     INTEGER :: Error_Status
@@ -3243,50 +3065,9 @@ CONTAINS
                                   FILLVALUE_ATTNAME, &
                                   ODPS_COEFFICIENTS_FILLVALUE )
     IF ( ANY(Put_Status /= SUCCESS) ) THEN
-      Message = 'Error writing '//ODPS_COEFFICIENTS_VARNAME//&
+      Message = 'Error writing '//N_PREDICTORS_VARNAME//&
                 ' variable attributes to '//TRIM(NC_Filename)
       CALL DefineVar_Cleanup(); RETURN
-    END IF
-
-    ! Multiple FOVS
-    IF ( PRESENT(n_Fovs_DimID) ) THEN
-       IF (n_Fovs_DimID >= 0) THEN
-          ! Define the AllODPS coefficients
-          ! ----------------------
-          NF90_Status = NF90_DEF_VAR( NC_FileID, &
-                                      AllODPS_COEFFICIENTS_VARNAME, &
-                                      AllODPS_COEFFICIENTS_TYPE, &
-                                      dimIDs=(/n_Coeffs_DimID, n_Fovs_DimID/), &
-                                      varID =VarID )
-          IF ( NF90_Status /= NF90_NOERR ) THEN
-             Message = 'Error defining '//AllODPS_COEFFICIENTS_VARNAME//' variable in '//&
-                  TRIM(NC_Filename)//' - '//TRIM(NF90_STRERROR( NF90_Status ))
-             CALL DefineVar_Cleanup(); RETURN
-          END IF
-
-          Put_Status(1) = NF90_PUT_ATT( NC_FileID, &
-                                        VarID, &
-                                        LONGNAME_ATTNAME, &
-                                        AllODPS_COEFFICIENTS_LONGNAME )
-          Put_Status(2) = NF90_PUT_ATT( NC_FileID, &
-                                        VarID, &
-                                        DESCRIPTION_ATTNAME, &
-                                        AllODPS_COEFFICIENTS_DESCRIPTION )
-          Put_Status(3) = NF90_PUT_ATT( NC_FileID, &
-                                        VarID, &
-                                        UNITS_ATTNAME, &
-                                        AllODPS_COEFFICIENTS_UNITS )
-          Put_Status(4) = NF90_PUT_ATT( NC_FileID, &
-                                        VarID, &
-                                        FILLVALUE_ATTNAME, &
-                                        AllODPS_COEFFICIENTS_FILLVALUE )
-          IF ( ANY(Put_Status /= SUCCESS) ) THEN
-             Message = 'Error writing '//AllODPS_COEFFICIENTS_VARNAME//&
-                  ' variable attributes to '//TRIM(NC_Filename)
-             CALL DefineVar_Cleanup(); RETURN
-          END IF
-
-       END IF
     END IF
 
   CONTAINS
@@ -3948,42 +3729,6 @@ CONTAINS
       END IF
     END IF
 
-    ! Multiple FOVS
-    IF ( ODPS%nFOVs > 1 )THEN
-
-       ! Write the All n_Predictors data
-    ! --------------------------
-       Error_Status = Put_netCDF_Variable( NC_FileID, &
-                                           AllN_PREDICTORS_VARNAME, &
-                                           ODPS%Alln_Predictors )
-       IF ( Error_Status /= SUCCESS ) THEN
-          Message = 'Error writing '//AllN_PREDICTORS_VARNAME//' to '//TRIM(NC_Filename)
-          CALL WriteVar_Cleanup(); RETURN
-       END IF
-
-       ! Write the All Pos_Index data
-    ! --------------------------
-       Error_Status = Put_netCDF_Variable( NC_FileID, &
-                                           AllPOS_INDEX_VARNAME, &
-                                           ODPS%AllPos_Index )
-       IF ( Error_Status /= SUCCESS ) THEN
-          Message = 'Error writing '//AllPOS_INDEX_VARNAME//' to '//TRIM(NC_Filename)
-          CALL WriteVar_Cleanup(); RETURN
-       END IF
-
-       IF (ODPS%n_Coeffs > 0 ) THEN
-          ! Write the All ODPS Tau_Coefficients data
-      ! -------------------------------
-          Error_Status = Put_netCDF_Variable( NC_FileID, &
-                                              AllODPS_COEFFICIENTS_VARNAME, &
-                                              ODPS%AllC )
-          IF ( Error_Status /= SUCCESS ) THEN
-             Message = 'Error writing '//AllODPS_COEFFICIENTS_VARNAME//' to '//TRIM(NC_Filename)
-             CALL WriteVar_Cleanup(); RETURN
-          END IF
-       END IF
-    END IF
-
     IF (ODPS%n_OCoeffs > 0 ) THEN
       ! Write the Alpha data
       ! --------------------
@@ -4320,43 +4065,6 @@ CONTAINS
         Message = 'Error reading '//ODPS_COEFFICIENTS_VARNAME//' to '//TRIM(NC_Filename)
         CALL ReadVar_Cleanup(); RETURN
       END IF
-    END IF
-
-    ! Multiple FOVS
-    IF ( ODPS%nFOVs > 1 )THEN
-
-       ! Read the All n_Predictors data
-       ! --------------------------
-       Error_Status = Get_netCDF_Variable( NC_FileID, &
-                                           AllN_PREDICTORS_VARNAME, &
-                                           ODPS%Alln_Predictors )
-       IF ( Error_Status /= SUCCESS ) THEN
-          Message = 'Error reading '//AllN_PREDICTORS_VARNAME//' to '//TRIM(NC_Filename)
-          CALL ReadVar_Cleanup(); RETURN
-       END IF
-
-       ! Read the All Pos_Index data
-       ! --------------------------
-       Error_Status = Get_netCDF_Variable( NC_FileID, &
-                                           AllPOS_INDEX_VARNAME, &
-                                           ODPS%AllPos_Index )
-       IF ( Error_Status /= SUCCESS ) THEN
-          Message = 'Error reading '//AllPOS_INDEX_VARNAME//' to '//TRIM(NC_Filename)
-          CALL ReadVar_Cleanup(); RETURN
-       END IF
-
-       IF (ODPS%n_Coeffs > 0 ) THEN
-          ! Read the All ODPS Tau_Coefficients data
-          ! -------------------------------
-          Error_Status = Get_netCDF_Variable( NC_FileID, &
-                                              AllODPS_COEFFICIENTS_VARNAME, &
-                                              ODPS%AllC )
-          IF ( Error_Status /= SUCCESS ) THEN
-             Message = 'Error reading '//AllODPS_COEFFICIENTS_VARNAME//' to '//TRIM(NC_Filename)
-             CALL ReadVar_Cleanup(); RETURN
-          END IF
-       END IF
-
     END IF
 
     IF (ODPS%n_OCoeffs > 0 ) THEN

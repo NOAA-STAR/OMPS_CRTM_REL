@@ -67,9 +67,6 @@ MODULE ODPS_Define
   ! -----------------
   ! Module parameters
   ! -----------------
-  ! RCS Id for the module
-  CHARACTER(*), PARAMETER :: MODULE_RCS_ID = &
-  '$Id:  $'
   ! ODPS invalid values
   INTEGER,      PARAMETER :: IP_INVALID = -1
   REAL(fp),     PARAMETER :: FP_INVALID = -1.0_fp
@@ -437,7 +434,7 @@ CONTAINS
     ! Set up
     ! ------
     Error_Status = SUCCESS
-    IF ( PRESENT( RCS_Id ) ) RCS_Id = MODULE_RCS_ID
+    IF ( PRESENT( RCS_Id ) ) RCS_Id = "unknown"
 
     ! Reinitialise the dimensions
     ODPS%n_Layers     = 0
@@ -527,14 +524,6 @@ CONTAINS
                             Error_Status,    &
                             Message_Log=Message_Log )
     END IF
-
-    IF (ODPS%nFOVs > 1) THEN
-       ODPS%nFOVs = 0
-       DEALLOCATE(ODPS%Alln_Predictors, &
-            ODPS%AllPos_Index)
-       IF (ASSOCIATED(ODPS%AllC)) DEALLOCATE(ODPS%AllC)
-    END IF
-
   END FUNCTION Destroy_ODPS
 
 
@@ -554,7 +543,6 @@ CONTAINS
 !                                     n_Channels             , &  ! Input
 !                                     n_Coeffs               , &  ! Input
 !                                     ODPS                   , &  ! Output
-!                                     n_Fovs=n_Fovs          , &  ! Optional Input
 !                                     RCS_Id     =RCS_Id     , &  ! Revision control
 !                                     Message_Log=Message_Log  )  ! Error messaging
 !
@@ -602,12 +590,6 @@ CONTAINS
 !                     ATTRIBUTES: INTENT(OUT)
 !
 ! OPTIONAL INPUT ARGUMENTS:
-!       n_Fovs:       The total number of fovs
-!                     UNITS:      N/A
-!                     TYPE:       INTEGER
-!                     DIMENSION:  Scalar
-!                     ATTRIBUTES: INTENT(IN)
-!
 !       Message_Log:  Character string specifying a filename in
 !                     which any messages will be logged. If not
 !                     specified, or if an error occurs opening
@@ -653,7 +635,6 @@ CONTAINS
                           n_Channels  , &  ! Input
                           n_Coeffs    , &  ! Input
                           ODPS        , &  ! Output
-                          n_fovs      , &  ! Optional Input
                           RCS_Id      , &  ! Revision control
                           Message_Log ) &  ! Error messaging
                         RESULT( Error_Status )
@@ -664,7 +645,6 @@ CONTAINS
     INTEGER               , INTENT(IN)     :: n_Channels
     INTEGER               , INTENT(IN)     :: n_Coeffs
     TYPE(ODPS_type)       , INTENT(IN OUT) :: ODPS
-    INTEGER, OPTIONAL     , INTENT(IN)     :: n_Fovs
     CHARACTER(*), OPTIONAL, INTENT(OUT)    :: RCS_Id
     CHARACTER(*), OPTIONAL, INTENT(IN)     :: Message_Log
     ! Function result
@@ -674,12 +654,11 @@ CONTAINS
     ! Local variables
     CHARACTER(ML) :: Message
     INTEGER :: Allocate_Status
-    INTEGER :: n_Fovs_local
 
     ! Set up
     ! ------
     Error_Status = SUCCESS
-    IF ( PRESENT( RCS_Id ) ) RCS_Id = MODULE_RCS_ID
+    IF ( PRESENT( RCS_Id ) ) RCS_Id = "unknown"
 
     ! Check dimension input
     IF ( n_Layers     < 1 .OR. &
@@ -736,29 +715,6 @@ CONTAINS
       RETURN
     END IF
 
-    IF ( PRESENT( n_Fovs )) THEN
-       n_Fovs_local = n_Fovs
-    ELSE
-       n_Fovs_local = 0
-    ENDIF
-
-    IF ( n_Fovs_local > 1 )THEN
-       Allocate( ODPS%Alln_Predictors( n_Components, n_Channels, n_Fovs_local ), &
-                 ODPS%AllPos_Index( n_Components, n_Channels, n_Fovs_local), &
-                 STAT=Allocate_Status )
-       IF ( Allocate_Status /= 0 ) THEN
-          Error_Status = FAILURE
-          WRITE( Message,'("Error allocating ODPS multiple FOV data arrays. STAT = ",i0)' ) &
-                         Allocate_Status
-          CALL Display_Message( ROUTINE_NAME, &
-               TRIM(Message), &
-               Error_Status, &
-               Message_Log=Message_Log )
-          RETURN
-       END IF
-
-    ENDIF
-
     IF( n_Coeffs > 0 )THEN
       ALLOCATE( ODPS%C( n_Coeffs ), &
                 STAT=Allocate_Status )
@@ -772,21 +728,6 @@ CONTAINS
                               Message_Log=Message_Log )
         RETURN
       END IF
-
-      IF ( n_Fovs_local > 1 )THEN
-        ALLOCATE( ODPS%AllC( n_Coeffs, n_Fovs_local ), &
-                  STAT=Allocate_Status )
-        IF ( Allocate_Status /= 0 ) THEN
-          Error_Status = FAILURE
-          WRITE( Message,'("Error allocating the ODPS AllC array. STAT = ",i0)' ) &
-                         Allocate_Status
-          CALL Display_Message( ROUTINE_NAME, &
-                                TRIM(Message), &
-                                Error_Status, &
-                                Message_Log=Message_Log )
-          RETURN
-        END IF
-      END IF
     END IF
 
     ! Assign the dimensions and initialise arrays
@@ -795,7 +736,6 @@ CONTAINS
     ODPS%n_Absorbers  = n_Absorbers
     ODPS%n_Channels   = n_Channels
     ODPS%n_Coeffs     = n_Coeffs
-    ODPS%nFovs        = n_Fovs_local
 
     ODPS%Sensor_Channel    = 0
     ODPS%Component_ID      = IP_INVALID
@@ -912,7 +852,7 @@ CONTAINS
     ! Set up
     ! ------
     Error_Status = SUCCESS
-    IF ( PRESENT( RCS_Id ) ) RCS_Id = MODULE_RCS_ID
+    IF ( PRESENT( RCS_Id ) ) RCS_Id = "unknown"
 
     IF ( n_OCoeffs < 1 ) THEN
       Error_Status = FAILURE
@@ -1055,7 +995,7 @@ CONTAINS
 
     ! Set up
     ! ------
-    IF ( PRESENT( RCS_Id ) ) RCS_Id = MODULE_RCS_ID
+    IF ( PRESENT( RCS_Id ) ) RCS_Id = "unknown"
 
     ! ALL *input* pointers must be associated
     IF ( .NOT. Associated_ODPS( ODPS_In ) ) THEN
@@ -1241,7 +1181,7 @@ CONTAINS
     ! Set up
     ! ------
     Error_Status = SUCCESS
-    IF ( PRESENT( RCS_Id ) ) RCS_Id = MODULE_RCS_ID
+    IF ( PRESENT( RCS_Id ) ) RCS_Id = "unknown"
 
     ! Check structures
     IF ( .NOT. Associated_ODPS( ODPS1 ) ) THEN
@@ -1570,7 +1510,7 @@ CONTAINS
     ! Set up
     ! ------
     Error_Status = SUCCESS
-    IF ( PRESENT( RCS_Id ) ) RCS_Id = MODULE_RCS_ID
+    IF ( PRESENT( RCS_Id ) ) RCS_Id = "unknown"
 
     ! Check structures
     IF ( .NOT. Associated_ODPS( ODPS1 ) ) THEN
@@ -1935,7 +1875,7 @@ CONTAINS
     ! Set up
     ! ------
     Error_Status = SUCCESS
-    IF ( PRESENT( RCS_Id ) ) RCS_Id = MODULE_RCS_ID
+    IF ( PRESENT( RCS_Id ) ) RCS_Id = "unknown"
 
     ! Default precision is a single unit in last place
     ULP = 1
@@ -2260,7 +2200,7 @@ CONTAINS
     ! Set up
     ! ------
     Error_Status = SUCCESS
-    IF ( PRESENT( RCS_Id ) ) RCS_Id = MODULE_RCS_ID
+    IF ( PRESENT( RCS_Id ) ) RCS_Id = "unknown"
 
 
     ! Check the release
@@ -2361,7 +2301,7 @@ CONTAINS
     ! Set up
     ! ------
     Error_Status = SUCCESS
-    IF ( PRESENT(RCS_Id) ) RCS_Id = MODULE_RCS_ID
+    IF ( PRESENT(RCS_Id) ) RCS_Id = "unknown"
 
 
     ! Check the algorithm ID
@@ -2430,7 +2370,7 @@ CONTAINS
 
     ! Set up
     ! ------
-    IF ( PRESENT( RCS_Id ) ) RCS_Id = MODULE_RCS_ID
+    IF ( PRESENT( RCS_Id ) ) RCS_Id = "unknown"
 
     ! Write the required data to the local string
     ! -------------------------------------------

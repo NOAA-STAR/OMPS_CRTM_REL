@@ -120,6 +120,7 @@ MODULE CSvar_Define
     TYPE(CSinterp_type), ALLOCATABLE :: csi(:,:)  ! I3 x I4
     ! The interpolation results
     REAL(fp), ALLOCATABLE :: ke(:,:)          ! I3 x I4  Mass extinction coefficient
+    REAL(fp), ALLOCATABLE :: kb(:,:)          ! I3 x I4  Mass extinction coefficient
     REAL(fp), ALLOCATABLE :: w(:,:)           ! I3 x I4  Single Scatter Albedo
     REAL(fp), ALLOCATABLE :: g(:,:)           ! I3 x I4  Asymmetry factor
     REAL(fp), ALLOCATABLE :: pcoeff(:,:,:,:)  ! 0:I1 x I2 x I3 x I4  Phase coefficients
@@ -180,6 +181,7 @@ CONTAINS
     ! Perform the allocation
     ALLOCATE( self%csi(n_Layers, n_Clouds), &
               self%ke(n_Layers, n_Clouds), &
+              self%kb(n_Layers, n_Clouds), &
               self%w(n_Layers, n_Clouds), &
               self%g(n_Layers, n_Clouds), &
               self%pcoeff(0:n_Legendre_Terms,n_Phase_Elements,n_Layers, n_Clouds), &

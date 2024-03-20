@@ -66,7 +66,6 @@ MODULE SpcCoeff_Define
                                    ACCoeff_Inspect       , &
                                    ACCoeff_ValidRelease  , &
                                    ACCoeff_Info          , &
-                                   ACCoeff_DefineVersion , &
                                    ACCoeff_Subset        , &
                                    ACCoeff_Concat        , &
                                    ACCoeff_ChannelReindex
@@ -78,7 +77,6 @@ MODULE SpcCoeff_Define
                                    NLTECoeff_Inspect       , &
                                    NLTECoeff_ValidRelease  , &
                                    NLTECoeff_Info          , &
-                                   NLTECoeff_DefineVersion , &
                                    NLTECoeff_Subset        , &
                                    NLTECoeff_Concat        , &
                                    NLTECoeff_ChannelReindex
@@ -102,7 +100,6 @@ MODULE SpcCoeff_Define
   PUBLIC :: SpcCoeff_Inspect
   PUBLIC :: SpcCoeff_ValidRelease
   PUBLIC :: SpcCoeff_Info
-  PUBLIC :: SpcCoeff_DefineVersion
   PUBLIC :: SpcCoeff_Subset
   PUBLIC :: SpcCoeff_Concat
   ! ...Channel flag specific procedures
@@ -121,14 +118,12 @@ MODULE SpcCoeff_Define
   PUBLIC :: ACCoeff_Inspect
   PUBLIC :: ACCoeff_ValidRelease
   PUBLIC :: ACCoeff_Info
-  PUBLIC :: ACCoeff_DefineVersion
   PUBLIC :: NLTECoeff_Associated    
   PUBLIC :: NLTECoeff_Destroy       
   PUBLIC :: NLTECoeff_Create        
   PUBLIC :: NLTECoeff_Inspect       
   PUBLIC :: NLTECoeff_ValidRelease  
   PUBLIC :: NLTECoeff_Info          
-  PUBLIC :: NLTECoeff_DefineVersion
 
 
   ! ---------------------
@@ -142,9 +137,6 @@ MODULE SpcCoeff_Define
   ! -----------------
   ! Module parameters
   ! -----------------
-  ! Version Id for the module
-  CHARACTER(*), PARAMETER :: MODULE_VERSION_ID = &
-  '$Id: SpcCoeff_Define.f90 29484 2013-06-26 20:49:52Z paul.vandelst@noaa.gov $'
   ! Literal constants
   REAL(Double), PARAMETER :: ZERO = 0.0_Double
   ! Default message string length
@@ -279,7 +271,6 @@ CONTAINS
     TYPE(SpcCoeff_type), INTENT(OUT) :: SpcCoeff
     SpcCoeff%Is_Allocated = .FALSE.
     SpcCoeff%n_Channels        = 0
-    SpcCoeff%nFovs             = 0
     SpcCoeff%Sensor_Id         = ''
     SpcCoeff%WMO_Satellite_ID  = INVALID_WMO_SATELLITE_ID
     SpcCoeff%WMO_Sensor_ID     = INVALID_WMO_SENSOR_ID
@@ -299,7 +290,6 @@ CONTAINS
 ! CALLING SEQUENCE:
 !       CALL SpcCoeff_Create( SpcCoeff  , &
 !                             n_Channels  )         
-!                             n_Fovs=nFovs  )
 !
 ! OBJECTS:
 !       SpcCoeff:           SpcCoeff object structure.
@@ -321,25 +311,16 @@ CONTAINS
 
   ELEMENTAL SUBROUTINE SpcCoeff_Create( &
     SpcCoeff  , &  ! Output
-    n_Channels, &  ! Input
-    n_Fovs  )      ! Optional Input
+    n_Channels  )  ! Input
     ! Arguments
     TYPE(SpcCoeff_type), INTENT(OUT) :: SpcCoeff
     INTEGER            , INTENT(IN)  :: n_Channels
-    INTEGER ,OPTIONAL  , INTENT(IN)  :: n_Fovs
     ! Local variables
     INTEGER :: alloc_stat
-    INTEGER :: n_Fovs_local
 
     ! Check input
     IF ( n_Channels < 1 ) RETURN
     
-    IF ( PRESENT( n_Fovs )) THEN
-       n_Fovs_local = n_Fovs
-    ELSE
-       n_Fovs_local = 0
-    ENDIF
-
     ! Perform the allocation
     ALLOCATE( SpcCoeff%Sensor_Channel( n_Channels ),             &
               SpcCoeff%Polarization( n_Channels ),               &
@@ -356,18 +337,10 @@ CONTAINS
               STAT = alloc_stat )
     IF ( alloc_stat /= 0 ) RETURN
 
-    IF ( n_Fovs_local > 1 ) THEN
-      ALLOCATE( SpcCoeff%AllFrequency( n_Channels, n_Fovs_local ),        &
-                SpcCoeff%AllWavenumber( n_Channels, n_Fovs_local ),       &
-                SpcCoeff%AllSolar_Irradiance( n_Channels, n_Fovs_local ), &
-                STAT = alloc_stat )
-      IF ( alloc_stat /= 0 ) RETURN
-    ENDIF
 
     ! Initialise
     ! ...Dimensions
     SpcCoeff%n_Channels = n_Channels
-    SpcCoeff%nFovs        = n_Fovs_local
     ! ...Arrays
     SpcCoeff%Sensor_Channel             = 0
     SpcCoeff%Polarization               = INVALID_POLARIZATION
@@ -381,11 +354,6 @@ CONTAINS
     SpcCoeff%Band_C2                    = ZERO
     SpcCoeff%Cosmic_Background_Radiance = ZERO
     SpcCoeff%Solar_Irradiance           = ZERO
-    IF ( n_Fovs_local > 1 ) THEN
-      SpcCoeff%AllFrequency             = ZERO
-      SpcCoeff%AllWavenumber            = ZERO
-      SpcCoeff%AllSolar_Irradiance      = ZERO
-    END IF
 
 
     ! Set allocation indicator
@@ -627,54 +595,6 @@ CONTAINS
     Info = Long_String(1:MIN(LEN(Info), LEN_TRIM(Long_String)))
 
   END SUBROUTINE SpcCoeff_Info
-
-
-!--------------------------------------------------------------------------------
-!:sdoc+:
-!
-! NAME:
-!       SpcCoeff_DefineVersion
-!
-! PURPOSE:
-!       Subroutine to return the version information for the
-!       definition module(s).
-!
-! CALLING SEQUENCE:
-!       CALL SpcCoeff_DefineVersion( Id )
-!
-! OUTPUTS:
-!       Id:     Character string containing the version Id information for the
-!               structure definition module(s). If the string length is
-!               sufficient, the version information for all the modules (this,
-!               and those for the derived type components) are concatenated.
-!               Otherwise only the version id for this module is returned.
-!               UNITS:      N/A
-!               TYPE:       CHARACTER(*)
-!               DIMENSION:  Scalar
-!               ATTRIBUTES: INTENT(OUT)
-!
-!:sdoc-:
-!--------------------------------------------------------------------------------
-
-  SUBROUTINE SpcCoeff_DefineVersion( Id )
-    CHARACTER(*), INTENT(OUT) :: Id
-    INTEGER, PARAMETER :: CARRIAGE_RETURN = 13
-    INTEGER, PARAMETER :: LINEFEED = 10
-    INTEGER, PARAMETER :: SL = 256
-    CHARACTER(SL)   :: AC_Id
-    CHARACTER(SL)   :: NC_Id
-    CHARACTER(SL*3) :: Define_Id
-    CALL ACCoeff_DefineVersion( AC_Id )
-    CALL NLTECoeff_DefineVersion( NC_Id )
-    Define_Id = MODULE_VERSION_ID//';'//ACHAR(CARRIAGE_RETURN)//ACHAR(LINEFEED)//&
-                '  '//TRIM(AC_Id)//';'//ACHAR(CARRIAGE_RETURN)//ACHAR(LINEFEED)//&
-                '  '//TRIM(NC_Id)
-    IF ( LEN_TRIM(Define_Id) <= LEN(Id) ) THEN
-      Id = Define_Id
-    ELSE
-      Id = MODULE_VERSION_ID
-    END IF
-  END SUBROUTINE SpcCoeff_DefineVersion
 
 
 !--------------------------------------------------------------------------------
