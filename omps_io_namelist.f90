@@ -54,7 +54,7 @@ MODULE OMPS_NAMELIST_MODULE
         LOGICAL, PUBLIC :: Use_allFOV_Nadir = .FALSE.
         INTEGER, PUBLIC :: Refl_alg 
 
-        INTEGER :: n_Surf_ch
+        INTEGER, PUBLIC :: n_Surf_ch
         INTEGER :: select_ch(n_max_select)
 
   END TYPE OMPS_IO_NAMELIST
@@ -109,13 +109,67 @@ CONTAINS
       namelist%nprof = 175
       namelist%nspec = 260
       namelist%select_ch(1:n_Surf_ch) = (/61,117,175/) 
-      print*,namelist%select_ch(1:n_Surf_ch)
+      ! print*,namelist%select_ch(1:n_Surf_ch)
       namelist%max_FOV = 35 
       ! manually add or modify the default values
       IF(trim(Sensor_Id)=='u.omps-tcP18_npp') THEN
          namelist%nspec = 196
+         namelist%nprof = 175
+         namelist%max_FOV = 35
+         namelist%n_Surf_ch = 3
+         namelist%select_ch(1:n_Surf_ch) = (/61,117,175/)
+      ELSE IF(trim(Sensor_Id)=='u.omps-tcP18_n20') THEN
+         namelist%nspec = 260
+         namelist%nprof = 1575
+         namelist%max_FOV = 35
+         namelist%n_Surf_ch = 3
+         namelist%select_ch(1:n_Surf_ch) = (/61,117,175/)
+      ELSE IF(trim(Sensor_Id)=='u.omps-tcP18_n21') THEN
+         namelist%nspec = 260
+         namelist%nprof = 7200
+         namelist%max_FOV = 177
+         namelist%n_Surf_ch = 3
+         namelist%select_ch(1:n_Surf_ch) = (/61,117,175/)
+      ELSE IF(trim(Sensor_Id)=='u.omps-tcAllFOV_n21') THEN
+         namelist%nspec = 260
+         namelist%nprof = 7200
+         namelist%max_FOV = 177
+         namelist%n_Surf_ch = 3
+         namelist%select_ch(1:n_Surf_ch) = (/61,117,175/)
+      ELSE IF(trim(Sensor_Id)=='u.omps-tcAllFOV_n20') THEN
+         namelist%nspec = 260
+         namelist%nprof = 1575
+         namelist%max_FOV = 35
+         namelist%n_Surf_ch = 3
+         namelist%select_ch(1:n_Surf_ch) = (/61,117,175/)
+      ELSE IF(trim(Sensor_Id)=='u.omps-tcAllFOV_npp') THEN
+         namelist%nspec = 260
+         namelist%nprof = 175
+         namelist%max_FOV = 35
+         namelist%n_Surf_ch = 3
+         namelist%select_ch(1:n_Surf_ch) = (/61,117,175/)
+      ELSE IF(trim(Sensor_Id)=='u.omps-npAllFOV_npp') THEN
+         namelist%nspec = 147
+         namelist%nprof = 1
+         namelist%max_FOV = 1
+         namelist%n_Surf_ch = 2
+         namelist%select_ch(1:n_Surf_ch) = (/145,146/)
+      ELSE IF(trim(Sensor_Id)=='u.omps-npAllFOV_n20') THEN
+         namelist%nspec = 200
+         namelist%nprof = 25
+         namelist%max_FOV = 5
+         namelist%n_Surf_ch = 2
+         namelist%select_ch(1:n_Surf_ch) = (/145,150/)
+      ELSE IF(trim(Sensor_Id)=='u.omps-npAllFOV_n21') THEN
+         namelist%nspec = 200   !200
+         namelist%nprof = 25
+         namelist%max_FOV = 5
+         namelist%n_Surf_ch = 2  !3
+         namelist%select_ch(1:n_Surf_ch) = (/145,155/)  !(/120,131,146/)
       END IF
-   
+        print*, namelist%nspec, namelist%nprof, namelist%max_FOV 
+        print*, namelist%n_Surf_ch, namelist%select_ch(1:n_Surf_ch)
+
   END SUBROUTINE set_Defaults
  
   SUBROUTINE get_select_ch(namelist, n_Surf_ch, select_ch ) 
